@@ -1,10 +1,13 @@
 import { sunAt, labelFromScore, isAfterSunset, deg, clamp } from "@/app/lib/sun";
+import { getVoxShadowValue, isVoxCityAvailable } from "@/app/lib/voxcity";
+import type { VoxShadowResult } from "@/app/lib/voxcity";
 
 export const runtime = "nodejs";
 
 type SunScoreParams = {
   hours?: number;
   now?: string; // ISO string
+  precision?: 'voxcity' | 'heuristic'; // calculation mode
 };
 
 type CafeWithScores = {
@@ -211,13 +214,99 @@ function computeSunScore(
   return clamp(score, 0, 1);
 }
 
+/**
+ * Hybrid sun score calculation using VoxCity when available, heuristic as fallback
+ */
+async function computeHybridSunScore(
+  sunAzimuth: number,
+  sunElevation: number, 
+  cafeOrientation: number,
+  cloudCover: number,
+  directRadiation: number,
+  cafeLat: number,
+  cafeLon: number,
+  hourTime: Date,
+  usePrecision: boolean = true
+): Promise<{ score: number; method: 'voxcity' | 'heuristic'; confidence: number }> {
+  
+  const sunElevationDeg = deg(sunElevation);
+  
+  // Sun too low = no score regardless of method
+  if (sunElevationDeg < 5) {
+    return { score: 0, method: 'heuristic', confidence: 1 };
+  }
+  
+  let shadowFactor = 1;
+  let method: 'voxcity' | 'heuristic' = 'heuristic';
+  let confidence = 0.7; // default heuristic confidence
+  
+  // Try VoxCity precision mode first
+  if (usePrecision) {
+    try {
+
+      const voxResult = await getVoxShadowValue(cafeLat, cafeLon, hourTime);
+
+      if (voxResult.precision === 'voxcity') {
+        shadowFactor = voxResult.shadowValue; // 0-1, already normalized
+        method = 'voxcity';
+        confidence = voxResult.confidence;
+        console.log(`✅ Using VoxCity result: ${shadowFactor}`);
+      } else {
+        console.log(`🔄 VoxCity returned heuristic, using fallback`);
+      }
+    } catch (error) {
+      console.warn('VoxCity lookup failed, falling back to heuristic:', error);
+    }
+  } else {
+    console.log(`⚠️ Precision mode disabled, skipping VoxCity`);
+  }
+  
+  // Fallback to heuristic shadow calculation if VoxCity unavailable
+  if (method === 'heuristic') {
+    const heuristicScore = computeSunScore(
+      sunAzimuth,
+      sunElevation,
+      cafeOrientation,
+      cloudCover,
+      directRadiation,
+      cafeLat,
+      cafeLon
+    );
+    
+    // Extract shadow component from heuristic (approximation)
+    shadowFactor = heuristicScore > 0 ? 0.8 : 0.2; // simplified
+  }
+  
+  // Common factors regardless of method
+  const sunAzimuthDeg = deg(sunAzimuth);
+  const cafeAzimuthRad = (cafeOrientation - 180) * Math.PI / 180;
+  const azimuthDiff = Math.abs(sunAzimuth - cafeAzimuthRad);
+  const normalizedDiff = Math.min(azimuthDiff, 2 * Math.PI - azimuthDiff);
+  const facingScore = Math.max(0, Math.cos(normalizedDiff));
+  
+  const elevScore = clamp((sunElevationDeg - 8) / 20, 0, 1);
+  const cloudPenalty = 1 - (cloudCover / 100);
+  const radiationBonus = directRadiation > 100 ? 1.1 : 1.0;
+  
+  // Combine all factors
+  const finalScore = clamp(
+    shadowFactor * facingScore * elevScore * cloudPenalty * radiationBonus,
+    0,
+    1
+  );
+  
+  return { score: finalScore, method, confidence };
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const hours = parseInt(url.searchParams.get('hours') ?? '8');
   const nowParam = url.searchParams.get('now');
+  const precisionParam = url.searchParams.get('precision') ?? 'voxcity';
   
   const now = nowParam ? new Date(nowParam) : new Date();
   const maxHours = Math.min(hours, 12); // cap at 12 hours
+  const usePrecision = precisionParam === 'voxcity';
   
   try {
     // Fetch weather and cafes in parallel
@@ -232,6 +321,8 @@ export async function GET(request: Request) {
     
     const hourlyISO = weatherData.map(w => w.time);
     const cafesWithScores: CafeWithScores[] = [];
+    let voxCityUsageCount = 0;
+    let heuristicUsageCount = 0;
     
     for (const cafe of cafes) {
       const cafeOrientation = computeCafeOrientation(cafe);
@@ -243,17 +334,32 @@ export async function GET(request: Request) {
         const hourTime = new Date(weather.time);
         
         const { azimuth, elevation } = sunAt(hourTime, cafe.lat, cafe.lon);
-        const score = computeSunScore(
+        
+        // Use hybrid scoring (VoxCity + heuristic fallback)
+
+        const { score, method, confidence } = await computeHybridSunScore(
           azimuth,
           elevation,
           cafeOrientation,
           weather.cloudCover,
           weather.directRadiation,
           cafe.lat,
-          cafe.lon
+          cafe.lon,
+          hourTime,
+          usePrecision
         );
+
+        
+        // Track method usage for metadata
+        if (method === 'voxcity') {
+          voxCityUsageCount++;
+        } else {
+          heuristicUsageCount++;
+        }
         
         const afterSunset = isAfterSunset(hourTime, cafe.lat, cafe.lon);
+        
+
         
         scoreByHour.push(score);
         labelByHour.push(labelFromScore(score, afterSunset));
@@ -277,7 +383,15 @@ export async function GET(request: Request) {
         totalCafes: cafesWithScores.length,
         hoursComputed: maxHours,
         weatherSource: "open-meteo",
-        orientationMethod: "street-based-v1.1"
+        orientationMethod: "street-based-v1.1",
+        shadowMethod: usePrecision ? "voxcity+heuristic" : "heuristic-only",
+        voxCityUsage: {
+          voxCityCalculations: voxCityUsageCount,
+          heuristicFallbacks: heuristicUsageCount,
+          precisionCoverage: voxCityUsageCount > 0 ? 
+            (voxCityUsageCount / (voxCityUsageCount + heuristicUsageCount) * 100).toFixed(1) + '%' : 
+            '0%'
+        }
       }
     };
     

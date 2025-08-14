@@ -26,6 +26,7 @@ export function CoffeeApp() {
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
   const [precisionMode, setPrecisionMode] = useState(true);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [voxCityStatus, setVoxCityStatus] = useState<any>(null);
 
   // Get user location
   useEffect(() => {
@@ -96,9 +97,10 @@ export function CoffeeApp() {
     async function loadData() {
       try {
         setLoading(true);
+        const precisionParam = precisionMode ? 'voxcity' : 'heuristic';
         const [cafesRes, sunScoreRes] = await Promise.all([
           fetch("/api/cafes"),
-          fetch("/api/sunscore?hours=8")
+          fetch(`/api/sunscore?hours=8&precision=${precisionParam}`)
         ]);
         
         const cafesData = await cafesRes.json();
@@ -110,6 +112,7 @@ export function CoffeeApp() {
         
         if (sunData.cafes) {
           setSunScoreData(sunData);
+          setVoxCityStatus(sunData.meta?.voxCityUsage || null);
           
           // Set selectedHour to current Paris time
           if (sunData.hours) {
@@ -149,7 +152,7 @@ export function CoffeeApp() {
     }
     
     loadData();
-  }, []);
+  }, [precisionMode]); // Reload when precision mode changes
 
   // Filter and sort cafes
   const filteredCafes = cafes
@@ -269,28 +272,35 @@ export function CoffeeApp() {
             <span className="toggle-label">{precisionMode ? 'P' : 'H'}</span>
           </button>
           <div className="precision-tooltip">
-            <div className="tooltip-content">
-              <div className="tooltip-header">
-                <strong>{precisionMode ? 'Precision Mode' : 'Heuristic Mode'}</strong>
+                          <div className="tooltip-content">
+                <div className="tooltip-header">
+                  <strong>{precisionMode ? 'Precision Mode' : 'Heuristic Mode'}</strong>
+                </div>
+                <div className="tooltip-body">
+                  {precisionMode ? (
+                    <>
+                      <div>🎯 <strong>High-accuracy calculations</strong></div>
+                      <div>• Real shadow analysis</div>
+                      <div>• 2-5m resolution accuracy</div>
+                      <div>• Uses precomputed data</div>
+                      {voxCityStatus && (
+                        <div className="voxcity-status">
+                          <div>📊 <strong>VoxCity Coverage: {voxCityStatus.precisionCoverage}</strong></div>
+                          <div>• Precision calculations: {voxCityStatus.voxCityCalculations}</div>
+                          <div>• Heuristic fallbacks: {voxCityStatus.heuristicFallbacks}</div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div>📐 <strong>Fast approximations</strong></div>
+                      <div>• Street-based orientation</div>
+                      <div>• General shadow estimates</div>
+                      <div>• Real-time calculations</div>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="tooltip-body">
-                {precisionMode ? (
-                  <>
-                    <div>🎯 <strong>High-accuracy calculations</strong></div>
-                    <div>• Real shadow analysis</div>
-                    <div>• 2-5m resolution accuracy</div>
-                    <div>• Uses precomputed data</div>
-                  </>
-                ) : (
-                  <>
-                    <div>📐 <strong>Fast approximations</strong></div>
-                    <div>• Street-based orientation</div>
-                    <div>• General shadow estimates</div>
-                    <div>• Real-time calculations</div>
-                  </>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </div>

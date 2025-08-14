@@ -61,18 +61,33 @@ out body;
 `;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 50000);
+  const timeout = setTimeout(() => controller.abort(), 25000); // Reduced for Vercel
   
   try {
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: {
-        "content-type": "application/x-www-form-urlencoded",
-        "User-Agent": "KinParisCoffeeShades/0.1",
-      },
-      body: new URLSearchParams({ data: query }),
-      signal: controller.signal,
-    });
+    // Try primary Overpass API, fallback to alternative
+    let res;
+    try {
+      res = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "User-Agent": "KinParisCoffeeShades/0.1",
+        },
+        body: new URLSearchParams({ data: query }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      console.warn("Primary Overpass API failed, trying fallback:", error);
+      res = await fetch("https://lz4.overpass-api.de/api/interpreter", {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "User-Agent": "KinParisCoffeeShades/0.1",
+        },
+        body: new URLSearchParams({ data: query }),
+        signal: controller.signal,
+      });
+    }
     clearTimeout(timeout);
     
     if (!res.ok) throw new Error(`Overpass ${res.status}`);

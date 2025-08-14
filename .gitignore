@@ -2,8 +2,7 @@
 
 # dependencies
 /node_modules
-/.pnp
-.pnp.js
+/.pnpm-store
 
 # testing
 /coverage
@@ -25,7 +24,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env
 .env*.local
 
 # vercel
@@ -35,5 +33,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# misc
-.vscode
+# VoxCity generated data - these are built during prebuild
+/public/vox/

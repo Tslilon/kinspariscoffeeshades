@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-voxcity": "node scripts/generate-voxcity-data.js",
+    "generate-voxcity-test": "node scripts/generate-voxcity-data.js --tiles=10 --months=1,6,12",
+    "prebuild": "npm run generate-voxcity-test"
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",
