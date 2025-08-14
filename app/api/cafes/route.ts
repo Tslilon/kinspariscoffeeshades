@@ -12,13 +12,18 @@ type Cafe = {
   tags: Record<string, any>;
 };
 
-const CACHE_DIR = path.join(process.cwd(), ".vercel", "cache");
+// Use /tmp for serverless environments like Vercel
+const CACHE_DIR = process.env.VERCEL ? "/tmp/cache" : path.join(process.cwd(), ".vercel", "cache");
 const CACHE_FILE = path.join(CACHE_DIR, "cafes.json");
 const TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 async function ensureCacheDir() {
-  if (!fs.existsSync(CACHE_DIR)) {
-    await fsp.mkdir(CACHE_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(CACHE_DIR)) {
+      await fsp.mkdir(CACHE_DIR, { recursive: true });
+    }
+  } catch (error) {
+    console.log('Cache directory creation failed, continuing without cache');
   }
 }
 
@@ -37,8 +42,13 @@ async function readCache(): Promise<any | null> {
 }
 
 async function writeCache(data: any) {
-  await ensureCacheDir();
-  await fsp.writeFile(CACHE_FILE, JSON.stringify(data), "utf8");
+  try {
+    await ensureCacheDir();
+    await fsp.writeFile(CACHE_FILE, JSON.stringify(data), "utf8");
+    console.log('✅ Cache written successfully');
+  } catch (error) {
+    console.log('❌ Cache write failed, continuing without cache');
+  }
 }
 
 async function loadSeed(): Promise<any> {
