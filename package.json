@@ -9,7 +9,7 @@
     "lint": "next lint",
     "generate-voxcity": "node scripts/generate-voxcity-data.js",
     "generate-voxcity-test": "node scripts/generate-voxcity-data.js --tiles=10 --months=1,6,12",
-    "prebuild": "npm run generate-voxcity-test"
+    "prebuild": "npm run generate-voxcity"
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",

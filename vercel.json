@@ -1,5 +1,5 @@
 {
-
+  "buildCommand": "npm run prebuild && npm run build",
   "functions": {
     "app/api/sunscore/route.ts": {
       "maxDuration": 30
