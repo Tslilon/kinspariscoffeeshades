@@ -8,9 +8,7 @@
       "maxDuration": 30
     }
   },
-  "env": {
-    "NEXT_PUBLIC_MAPTILER_KEY": "@next_public_maptiler_key"
-  },
+
   "headers": [
     {
       "source": "/vox/(.*)",
