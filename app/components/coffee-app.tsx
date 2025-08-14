@@ -45,6 +45,42 @@ export function CoffeeApp() {
   const [precisionMode, setPrecisionMode] = useState(true);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [voxCityStatus, setVoxCityStatus] = useState<any>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [menuExpanded, setMenuExpanded] = useState(false);
+
+  // Initialize theme from localStorage or system preference
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    let isDark = false;
+    if (savedTheme) {
+      // Use saved preference
+      isDark = savedTheme === 'dark';
+    } else {
+      // Fall back to system preference
+      isDark = prefersDark;
+    }
+    
+    setIsDarkMode(isDark);
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    
+    // Force override of system media query
+    document.documentElement.style.setProperty('color-scheme', isDark ? 'dark' : 'light');
+  }, []);
+
+  // Toggle theme
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    
+    // Save preference to localStorage
+    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+    
+    // Apply theme
+    document.documentElement.setAttribute('data-theme', newTheme ? 'dark' : 'light');
+    document.documentElement.style.setProperty('color-scheme', newTheme ? 'dark' : 'light');
+  };
 
   // Map starts hidden by default - user can toggle
   // (Removed auto-show on desktop to fix layout issues)
@@ -277,49 +313,71 @@ export function CoffeeApp() {
       </div>
       
       {/* Precision Mode Toggle - Bottom Left */}
-      <div className="precision-toggle-container">
-        <div className="precision-toggle-wrapper">
+                      <div className="bottom-menu">
           <button
-            className={`precision-toggle ${precisionMode ? 'precision' : 'heuristic'}`}
-            onClick={() => setPrecisionMode(!precisionMode)}
-            aria-label="Toggle calculation mode"
+            className="menu-toggle"
+            onClick={() => setMenuExpanded(!menuExpanded)}
+            aria-label="Open settings menu"
           >
-            <span className="toggle-indicator"></span>
-            <span className="toggle-label">{precisionMode ? 'P' : 'H'}</span>
+            ⚙️
           </button>
-          <div className="precision-tooltip">
-                          <div className="tooltip-content">
-                <div className="tooltip-header">
-                  <strong>{precisionMode ? 'Precision Mode' : 'Heuristic Mode'}</strong>
-                </div>
-                <div className="tooltip-body">
-                  {precisionMode ? (
-                    <>
-                      <div>🎯 <strong>High-accuracy calculations</strong></div>
-                      <div>• Real shadow analysis</div>
-                      <div>• 2-5m resolution accuracy</div>
-                      <div>• Uses precomputed data</div>
-                      {/* {voxCityStatus && (
-                        <div className="voxcity-status">
-                          <div>📊 <strong>VoxCity Coverage: {voxCityStatus.precisionCoverage}</strong></div>
-                          <div>• Precision calculations: {voxCityStatus.voxCityCalculations}</div>
-                          <div>• Heuristic fallbacks: {voxCityStatus.heuristicFallbacks}</div>
-                        </div>
-                      )} */}
-                    </>
-                  ) : (
-                    <>
-                      <div>📐 <strong>Fast approximations</strong></div>
-                      <div>• Street-based orientation</div>
-                      <div>• General shadow estimates</div>
-                      <div>• Real-time calculations</div>
-                    </>
-                  )}
+          
+          <div className={`menu-items ${menuExpanded ? 'expanded' : ''}`}>
+            <div className="control-item">
+              <button
+                className={`control-toggle ${precisionMode ? 'precision' : 'heuristic'}`}
+                onClick={() => setPrecisionMode(!precisionMode)}
+                aria-label="Toggle calculation mode"
+              >
+                <span className="toggle-label">{precisionMode ? 'P' : 'H'}</span>
+              </button>
+              <div className="control-tooltip">
+                <div className="tooltip-content">
+                  <div className="tooltip-header">
+                    <strong>{precisionMode ? 'Precision Mode' : 'Heuristic Mode'}</strong>
+                  </div>
+                  <div className="tooltip-body">
+                    {precisionMode ? (
+                      <>
+                        <div>🎯 <strong>High-accuracy calculations</strong></div>
+                        <div>• Real shadow analysis</div>
+                        <div>• 2-5m resolution accuracy</div>
+                        <div>• Uses precomputed data</div>
+                      </>
+                    ) : (
+                      <>
+                        <div>📐 <strong>Fast approximations</strong></div>
+                        <div>• Street-based orientation</div>
+                        <div>• General shadow estimates</div>
+                        <div>• Real-time calculations</div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
+            </div>
+            
+            <div className="control-item">
+              <button
+                className={`control-toggle ${isDarkMode ? 'dark' : 'light'}`}
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                <span className="toggle-label">{isDarkMode ? '🌙' : '☀️'}</span>
+              </button>
+              <div className="control-tooltip">
+                <div className="tooltip-content">
+                  <div className="tooltip-header">
+                    <strong>{isDarkMode ? 'Dark Mode' : 'Light Mode'}</strong>
+                  </div>
+                  <div className="tooltip-body">
+                    <div>Switch to {isDarkMode ? 'light' : 'dark'} theme</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
   );
 }

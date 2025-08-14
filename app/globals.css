@@ -86,8 +86,9 @@ h1 {
   color: var(--bg);
 }
 
+/* System preference support only when no explicit theme is set */
 @media (prefers-color-scheme: dark) {
-  body {
+  html:not([data-theme]) body {
     --fg: #f7fafc;
     --bg: #1a202c;
     --remix: #f6ad55;
@@ -396,13 +397,19 @@ main.main-app h1 {
 }
 
 .sort-select {
-  padding: 8px 12px;
+  padding: 8px 8px 8px 10px;
   border: 1px solid var(--accents-3);
   border-radius: 8px;
   background: var(--bg);
   color: var(--fg);
   font-size: 13px;
   min-width: 120px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+  padding-right: 32px;
 }
 
 .filter-pill {
@@ -698,20 +705,63 @@ main.main-app h1 {
   font-weight: 500;
 }
 
-/* Precision Mode Toggle - Bottom Left */
-.precision-toggle-container {
+/* Bottom Menu Panel */
+.bottom-menu {
   position: fixed;
   bottom: 20px;
   left: 20px;
   z-index: 1000;
 }
 
-.precision-toggle-wrapper {
+.menu-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--accents-3);
+  background: var(--bg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--accents-6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.menu-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: var(--accents-4);
+}
+
+.menu-items {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-items.expanded {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.control-item {
   position: relative;
 }
 
-.precision-toggle {
-  position: relative;
+.control-toggle {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -728,47 +778,36 @@ main.main-app h1 {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.precision-toggle:hover {
+.control-toggle.precision {
+  border-color: var(--sunny-orange);
+  background: linear-gradient(135deg, #fff5e6 0%, #fed7aa 100%);
+  color: var(--sunny-orange);
+}
+
+.control-toggle.heuristic {
   border-color: var(--accents-4);
+  background: var(--accents-2);
+  color: var(--accents-6);
+}
+
+.control-toggle.dark {
+  border-color: #4a5568;
+  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+  color: #ffd54f;
+}
+
+.control-toggle.light {
+  border-color: #ff8f00;
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  color: #ff8f00;
+}
+
+.control-toggle:hover {
+  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.precision-toggle.precision {
-  border-color: #007acc;
-  color: #007acc;
-  background: rgba(0, 122, 204, 0.05);
-}
-
-.precision-toggle.heuristic {
-  border-color: #ff6b35;
-  color: #ff6b35;
-  background: rgba(255, 107, 53, 0.05);
-}
-
-.precision-toggle .toggle-indicator {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-}
-
-.precision-toggle.precision .toggle-indicator {
-  background: #007acc;
-}
-
-.precision-toggle.heuristic .toggle-indicator {
-  background: #ff6b35;
-}
-
-.precision-toggle .toggle-label {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
-/* Tooltip */
-.precision-tooltip {
+.control-tooltip {
   position: absolute;
   bottom: 100%;
   left: 100%;
@@ -778,13 +817,20 @@ main.main-app h1 {
   visibility: hidden;
   transition: all 0.2s ease;
   pointer-events: none;
+  z-index: 1001;
 }
 
-.precision-toggle-wrapper:hover .precision-tooltip {
+.control-item:hover .control-tooltip {
   opacity: 1;
   visibility: visible;
-  pointer-events: auto;
+  transform: translateX(-20px) translateY(-16px);
 }
+
+
+
+
+
+
 
 /* VoxCity Status Display */
 .voxcity-status {
@@ -860,11 +906,79 @@ main.main-app h1 {
   background: var(--accents-1);
 }
 
+/* Force override system preferences with higher specificity */
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  --fg: #f7fafc !important;
+  --bg: #1a202c !important;
+  --remix: #f6ad55 !important;
+  --accents-1: #2d3748 !important;
+  --accents-2: #4a5568 !important;
+  --accents-3: #718096 !important;
+  --accents-4: #a0aec0 !important;
+  --accents-5: #cbd5e0 !important;
+  --accents-6: #e2e8f0 !important;
+  --accents-7: #edf2f7 !important;
+  --accents-8: #f7fafc !important;
+  --sunny-orange: #ff8a65 !important;
+  --warm-yellow: #ffeb3b !important;
+  --sky-blue: #64b5f6 !important;
+  --nav-border: #4a5568 !important;
+  --nav-background: #1f2937 !important;
+  --nav-text-active: #f6ad55 !important;
+  background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #374151 100%) !important;
+  color-scheme: dark !important;
+}
+
+html[data-theme="light"],
+html[data-theme="light"] body {
+  --fg: #2d3748 !important;
+  --bg: #fffcf8 !important;
+  --remix: #f6ad55 !important;
+  --accents-1: #fffef7 !important;
+  --accents-2: #fff5e6 !important;
+  --accents-3: #fed7aa !important;
+  --accents-4: #fdba74 !important;
+  --accents-5: #f97316 !important;
+  --accents-6: #ea580c !important;
+  --accents-7: #c2410c !important;
+  --accents-8: #9a3412 !important;
+  --sunny-orange: #ff6b35 !important;
+  --warm-yellow: #ffd700 !important;
+  --sky-blue: #87ceeb !important;
+  --nav-border: #fed7aa !important;
+  --nav-background: #fffef7 !important;
+  --nav-text-active: #ea580c !important;
+  background: linear-gradient(135deg, #fff8f0 0%, #fffbf5 50%, #fff5e6 100%) !important;
+  color-scheme: light !important;
+}
+
 /* Enhanced Footer Design */
 .app-footer {
   border-top: 1px solid var(--accents-3);
   margin-top: 10px;
   background: var(--accents-1);
+}
+
+/* Ensure dark mode styling for input elements */
+html[data-theme="dark"] input {
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+  border-color: var(--accents-3) !important;
+}
+
+html[data-theme="dark"] input::placeholder {
+  color: var(--accents-4) !important;
+}
+
+html[data-theme="light"] input {
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+  border-color: var(--accents-3) !important;
+}
+
+html[data-theme="light"] input::placeholder {
+  color: var(--accents-5) !important;
 }
 
 .footer-content {
@@ -1300,7 +1414,7 @@ main.main-app h1 {
 
 footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: flex-end;
   position: relative;
   bottom: 0;
