@@ -13,7 +13,7 @@ type Cafe = {
 };
 
 // Use /tmp for serverless environments like Vercel
-const CACHE_DIR = process.env.VERCEL ? "/tmp/cache" : path.join(process.cwd(), ".vercel", "cache");
+const CACHE_DIR = process.env.VERCEL_ENV ? "/tmp/cache" : path.join(process.cwd(), ".vercel", "cache");
 const CACHE_FILE = path.join(CACHE_DIR, "cafes.json");
 const TTL_MS = 24 * 60 * 60 * 1000; // 24h
 

@@ -61,15 +61,11 @@ async function fetchParisWeatherHourly(startTime: Date, hours: number) {
 }
 
 async function fetchCafes() {
-  // Use internal API call in development
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'http://localhost:3000';
-  
+  // Import the cafes logic directly instead of making HTTP calls
   try {
-    const res = await fetch(`${baseUrl}/api/cafes`);
-    if (!res.ok) throw new Error(`Cafes API ${res.status}`);
-    const data = await res.json();
+    const { GET: getCafes } = await import('../cafes/route');
+    const response = await getCafes();
+    const data = await response.json();
     return data.cafes ?? [];
   } catch (err) {
     console.error('Failed to fetch cafes:', err);
