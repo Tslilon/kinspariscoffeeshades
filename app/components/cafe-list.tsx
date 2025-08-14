@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { calculateDistance, formatDistance } from "@/app/lib/utils";
 
 type Cafe = {
   id: string;
@@ -21,6 +22,8 @@ type CafeListProps = {
   onSortChange: (sort: "name" | "distance" | "score") => void;
   onCafeSelect: (cafe: Cafe | null) => void;
   selectedCafe: Cafe | null;
+  userLocation?: {lat: number, lon: number} | null;
+  onShowOnMap?: (cafe: Cafe) => void;
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -33,16 +36,38 @@ export function CafeList({
   sortBy,
   onSortChange,
   onCafeSelect,
-  selectedCafe
+  selectedCafe,
+  userLocation,
+  onShowOnMap
 }: CafeListProps) {
   
   const [expandedCafes, setExpandedCafes] = useState<Set<string>>(new Set());
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   
   const getScoreDisplay = (cafe: Cafe) => {
-    const label = cafe.labelByHour?.[selectedHour] || "cloudOn";
+    const label = cafe.labelByHour?.[selectedHour] || "☁️";
     const score = cafe.scoreByHour?.[selectedHour];
     return { label, score };
+  };
+
+  const availableFilters = [
+    { id: 'outdoor_seating', label: 'Outdoor', key: 'outdoor_seating' },
+    { id: 'wifi', label: 'WiFi', key: 'internet_access' },
+    { id: 'vegan', label: 'Vegan', key: 'diet:vegan' },
+    { id: 'vegetarian', label: 'Vegetarian', key: 'diet:vegetarian' },
+    { id: 'ac', label: 'AC', key: 'air_conditioning' },
+    { id: 'accessible', label: 'Accessible', key: 'wheelchair' }
+  ];
+
+  const toggleFilter = (filterId: string) => {
+    const newFilters = new Set(activeFilters);
+    if (newFilters.has(filterId)) {
+      newFilters.delete(filterId);
+    } else {
+      newFilters.add(filterId);
+    }
+    setActiveFilters(newFilters);
   };
 
   const formatOpeningHours = (hours: string) => {
@@ -85,13 +110,13 @@ export function CafeList({
     const iconStyle = { fontSize: `${size}px` };
     
     switch (label) {
-      case "sun":
+      case "☀️":
         return <span className="sun-icon" style={{ ...iconStyle, color: "#ff6b35" }}>☀️</span>;
-      case "cloudSun":
+      case "⛅":
         return <span className="sun-icon" style={{ ...iconStyle, color: "#f7931e" }}>⛅</span>;
-      case "cloudOn":
+      case "☁️":
         return <span className="sun-icon" style={{ ...iconStyle, color: "#6c757d" }}>☁️</span>;
-      case "bedtime":
+      case "🌙":
         return <span className="sun-icon" style={{ ...iconStyle, color: "#4a4a4a" }}>🌙</span>;
       default:
         return <span className="sun-icon" style={{ ...iconStyle, color: "#6c757d" }}>☁️</span>;
@@ -110,10 +135,29 @@ export function CafeList({
 
   // Filter and sort cafes
   const filteredCafes = cafes
-    .filter(cafe => 
-      !searchQuery || 
-      cafe.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter(cafe => {
+      // Filter out unnamed cafés
+      if (!cafe.name || cafe.name === "Unnamed Café" || cafe.name.trim() === "") {
+        return false;
+      }
+      
+      // Apply search filter
+      if (searchQuery && !cafe.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      // Apply amenity filters
+      if (activeFilters.size > 0) {
+        const hasAllFilters = Array.from(activeFilters).every(filterId => {
+          const filter = availableFilters.find(f => f.id === filterId);
+          if (!filter) return true;
+          return cafe.tags?.[filter.key] === "yes";
+        });
+        if (!hasAllFilters) return false;
+      }
+      
+      return true;
+    })
     .sort((a, b) => {
       switch (sortBy) {
         case "name":
@@ -123,8 +167,15 @@ export function CafeList({
           const scoreB = b.scoreByHour?.[selectedHour] || 0;
           return scoreB - scoreA;
         case "distance":
-          // TODO: Implement distance sorting using KINHOUSE_COORDS
-          return 0;
+          // Calculate distance from user location or KINHOUSE_COORDS fallback
+          const kinHouseCoords = process.env.NEXT_PUBLIC_KINHOUSE_COORDS?.split(',') || ['48.8566', '2.3522'];
+          const refLat = userLocation?.lat || parseFloat(kinHouseCoords[0]);
+          const refLon = userLocation?.lon || parseFloat(kinHouseCoords[1]);
+          
+          const distanceA = calculateDistance(a.lat, a.lon, refLat, refLon);
+          const distanceB = calculateDistance(b.lat, b.lon, refLat, refLon);
+          
+          return distanceA - distanceB;
         default:
           return 0;
       }
@@ -136,32 +187,51 @@ export function CafeList({
   return (
     <div className="cafe-list">
       <div className="list-controls">
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Search cafés..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="search-input"
-          />
+        <div className="search-sort-row">
+          <div className="search-bar">
+            <input
+              type="text"
+              placeholder="Search cafés..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="search-input"
+            />
+          </div>
+          
+          <div className="sort-controls">
+            <select 
+              value={sortBy} 
+              onChange={(e) => onSortChange(e.target.value as any)}
+              className="sort-select"
+            >
+              <option value="score">Sun Score</option>
+              <option value="name">Name</option>
+              <option value="distance">Distance</option>
+            </select>
+          </div>
         </div>
         
-        <div className="sort-controls">
-          <label>Sort by:</label>
-          <select 
-            value={sortBy} 
-            onChange={(e) => onSortChange(e.target.value as any)}
-            className="sort-select"
-          >
-            <option value="score">Sun Score</option>
-            <option value="name">Name</option>
-            <option value="distance">Distance</option>
-          </select>
+        <div className="filter-pills-row">
+          <div className="filter-pills">
+            {availableFilters.map(filter => (
+              <button
+                key={filter.id}
+                className={`filter-pill ${activeFilters.has(filter.id) ? 'active' : ''}`}
+                onClick={() => toggleFilter(filter.id)}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          {activeFilters.size > 0 && (
+            <button 
+              className="clear-filters"
+              onClick={() => setActiveFilters(new Set())}
+            >
+              Clear all
+            </button>
+          )}
         </div>
-      </div>
-
-      <div className="cafe-count">
-        Showing {displayedCafes.length} of {filteredCafes.length} cafés
       </div>
 
       <div className="cafe-items">
@@ -175,6 +245,13 @@ export function CafeList({
           const phone = cafe.tags?.phone;
           const website = cafe.tags?.website;
           const cafeName = cafe.name || "Unnamed Café";
+          
+          // Calculate distance for display
+          const kinHouseCoords = process.env.NEXT_PUBLIC_KINHOUSE_COORDS?.split(',') || ['48.8566', '2.3522'];
+          const refLat = userLocation?.lat || parseFloat(kinHouseCoords[0]);
+          const refLon = userLocation?.lon || parseFloat(kinHouseCoords[1]);
+          const distanceKm = calculateDistance(cafe.lat, cafe.lon, refLat, refLon);
+          const distanceText = formatDistance(distanceKm);
           
           return (
             <div
@@ -201,14 +278,35 @@ export function CafeList({
                       <span className="cafe-name">{cafeName}</span>
                     )}
                   </div>
-                  {address && (
-                    <div className="cafe-address-preview">
-                      📍 {address}
-                    </div>
-                  )}
+                  <div className="cafe-meta-preview">
+                    {address && (
+                      <div className="cafe-address-preview">
+                        📍 {address}
+                      </div>
+                    )}
+                    {sortBy === "distance" && (
+                      <div className="cafe-distance-preview">
+                        🚶 {distanceText}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="cafe-card-right">
+                  <button
+                    className="show-map-icon-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onShowOnMap) {
+                        onShowOnMap(cafe);
+                      }
+                    }}
+                    title="Show on Map"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                  </button>
                   <div className="sun-score-compact">
                     {renderSunIcon(label, 28)}
                     {score !== undefined && (
@@ -257,17 +355,13 @@ export function CafeList({
                     </div>
                   )}
 
-                  <div className="cafe-actions">
-                    <button
-                      className={`select-button ${isSelected ? 'selected' : ''}`}
-                      onClick={() => onCafeSelect(isSelected ? null : cafe)}
-                    >
-                      {isSelected ? 'Deselect' : 'Select on Map'}
-                    </button>
-                  </div>
-
-                  <div className="cafe-coordinates">
-                    {cafe.lat.toFixed(4)}, {cafe.lon.toFixed(4)}
+                  <div className="cafe-location-info">
+                    <div className="cafe-distance">
+                      📍 Distance: {distanceText} from Kin House
+                    </div>
+                    <div className="cafe-coordinates">
+                      📍 Coordinates: {cafe.lat.toFixed(4)}, {cafe.lon.toFixed(4)}
+                    </div>
                   </div>
                 </div>
               )}

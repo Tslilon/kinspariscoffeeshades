@@ -9,10 +9,10 @@ export function sunAt(dt: Date, lat = 48.8566, lon = 2.3522) {
 }
 
 export function labelFromScore(s: number, isAfterSunset: boolean = false) {
-  if (isAfterSunset) return "bedtime"; // after sunset
-  if (s >= 0.6) return "sun"; // sunny
-  if (s >= 0.3) return "cloudSun"; // mixed/partial
-  return "cloudOn"; // shade/cloudy
+  if (isAfterSunset) return "🌙"; // after sunset
+  if (s >= 0.6) return "☀️"; // sunny
+  if (s >= 0.3) return "⛅"; // mixed/partial
+  return "☁️"; // shade/cloudy
 }
 
 export function isAfterSunset(dt: Date, lat = 48.8566, lon = 2.3522): boolean {

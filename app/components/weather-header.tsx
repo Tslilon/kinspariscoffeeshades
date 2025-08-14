@@ -33,8 +33,15 @@ export function WeatherHeader({ hours, selectedHour, onHourChange }: WeatherHead
   };
 
   const getWeatherIcon = () => {
-    // Simple weather icon based on temperature
+    // Simple weather icon based on temperature and time
     if (!weather) return "🌡️";
+    
+    const now = new Date();
+    const hour = now.getHours();
+    const isNight = hour < 6 || hour > 20;
+    
+    if (isNight) return "🌙";
+    
     const temp = weather.current?.temp_c || 0;
     if (temp > 25) return "☀️";
     if (temp > 15) return "⛅";
@@ -48,7 +55,7 @@ export function WeatherHeader({ hours, selectedHour, onHourChange }: WeatherHead
         <div className="weather-details">
           <div className="city">Paris, FR</div>
           <div className="temperature">
-            {weather?.current?.temp_c}°C / {weather?.current?.temp_f}°F
+            {weather?.current?.temp_c ? Math.round(weather.current.temp_c) : '--'}°C / {weather?.current?.temp_f ? Math.round(weather.current.temp_f) : '--'}°F
           </div>
         </div>
       </div>

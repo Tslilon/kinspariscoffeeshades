@@ -47,16 +47,21 @@ async function loadSeed(): Promise<any> {
   return JSON.parse(seedTxt);
 }
 
-// Simple Overpass query for just cafe nodes (most reliable)
+// Enhanced Overpass query for cafes + nearby buildings for orientation detection
 async function fetchOverpassCafes(): Promise<Cafe[]> {
   const query = `
-[out:json][timeout:30];
-node["amenity"="cafe"](48.8156,2.2242,48.9022,2.4699);
+[out:json][timeout:45];
+(
+  node["amenity"="cafe"](48.8156,2.2242,48.9022,2.4699);
+  way["amenity"="cafe"](48.8156,2.2242,48.9022,2.4699);
+  relation["amenity"="cafe"](48.8156,2.2242,48.9022,2.4699);
+);
+(._;>;);
 out body;
 `;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 35000);
+  const timeout = setTimeout(() => controller.abort(), 50000);
   
   try {
     const res = await fetch("https://overpass-api.de/api/interpreter", {
@@ -74,14 +79,32 @@ out body;
     const json = await res.json();
     
     const cafes: Cafe[] = (json?.elements ?? [])
-      .filter((el: any) => el.type === "node" && el.tags?.amenity === "cafe")
-      .map((el: any) => ({
-        id: `node/${el.id}`,
-        name: el.tags?.name ?? null,
-        lat: el.lat,
-        lon: el.lon,
-        tags: el.tags,
-      }));
+      .filter((el: any) => el.tags?.amenity === "cafe")
+      .map((el: any) => {
+        let lat, lon;
+        
+        if (el.type === "node") {
+          lat = el.lat;
+          lon = el.lon;
+        } else if (el.type === "way" && el.center) {
+          lat = el.center.lat;
+          lon = el.center.lon;
+        } else if (el.type === "relation" && el.center) {
+          lat = el.center.lat;
+          lon = el.center.lon;
+        } else {
+          return null; // Skip if no coordinate data
+        }
+        
+        return {
+          id: `${el.type}/${el.id}`,
+          name: el.tags?.name ?? null,
+          lat,
+          lon,
+          tags: el.tags,
+        };
+      })
+      .filter(Boolean) as Cafe[];
       
     return cafes;
   } finally {

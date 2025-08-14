@@ -12,24 +12,27 @@ body {
 }
 
 body {
-  --fg: black;
-  --bg: white;
-  --remix: #2f77d1;
+  --fg: #2d3748;
+  --bg: #fff8f0;
+  --remix: #f6ad55;
+  --sunny-orange: #ff6b35;
+  --warm-yellow: #ffd700;
+  --sky-blue: #87ceeb;
 
-  --accents-1: #fafafa;
-  --accents-2: #eaeaea;
-  --accents-3: #999999;
-  --accents-4: #888888;
-  --accents-5: #666666;
-  --accents-6: #444444;
-  --accents-7: #333333;
-  --accents-8: #111111;
+  --accents-1: #fffef7;
+  --accents-2: #fff5e6;
+  --accents-3: #fed7aa;
+  --accents-4: #fdba74;
+  --accents-5: #f97316;
+  --accents-6: #ea580c;
+  --accents-7: #c2410c;
+  --accents-8: #9a3412;
 
-  --nav-border: #bebebe80;
-  --nav-background: #fff;
-  --nav-text: #999;
-  --nav-text-active: #000;
-  --nav-pill: radial-gradient(#dadada 0%, #f1f1f1 100%);
+  --nav-border: #fed7aa;
+  --nav-background: #fffef7;
+  --nav-text: #fdba74;
+  --nav-text-active: #ea580c;
+  --nav-pill: linear-gradient(135deg, #fff5e6 0%, #fed7aa 100%);
   --root-padding: 16px;
 
   display: flex;
@@ -37,13 +40,9 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-  background: var(--bg);
+  background: linear-gradient(135deg, #fff8f0 0%, #fffbf5 50%, #fff5e6 100%);
   color: var(--fg);
   padding: 0 var(--root-padding);
-  background-image: url(/bg-light.png);
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
 }
 
 h1,
@@ -89,24 +88,25 @@ h1 {
 
 @media (prefers-color-scheme: dark) {
   body {
-    --fg: white;
-    --bg: black;
+    --fg: #f7fafc;
+    --bg: #1a202c;
+    --remix: #f6ad55;
 
-    --accents-8: #fafafa;
-    --accents-7: #eaeaea;
-    --accents-6: #999999;
-    --accents-5: #888888;
-    --accents-4: #666666;
-    --accents-3: #444444;
-    --accents-2: #333333;
-    --accents-1: #111111;
+    --accents-8: #f7fafc;
+    --accents-7: #edf2f7;
+    --accents-6: #a0aec0;
+    --accents-5: #718096;
+    --accents-4: #4a5568;
+    --accents-3: #2d3748;
+    --accents-2: #2a2f3a;
+    --accents-1: #1f2937;
 
-    --nav-border: #44444480;
-    --nav-background: #000;
-    --nav-text-active: #fff;
-    --nav-pill: radial-gradient(#505050 0%, #292929 100%);
+    --nav-border: #4a5568;
+    --nav-background: #1f2937;
+    --nav-text-active: #f6ad55;
+    --nav-pill: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
 
-    background-image: url(/bg-dark.png);
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #374151 100%);
   }
 }
 
@@ -172,10 +172,11 @@ main.main-app h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--accents-2);
-  background: var(--accents-1);
+  padding: 20px 24px;
+  border-bottom: none;
+  background: linear-gradient(135deg, var(--accents-1) 0%, var(--accents-2) 100%);
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .weather-info {
@@ -215,24 +216,29 @@ main.main-app h1 {
 }
 
 .hour-pill {
-  padding: 6px 12px;
-  border: 1px solid var(--accents-3);
-  background: transparent;
-  border-radius: 16px;
-  font-size: 12px;
+  padding: 8px 16px;
+  border: none;
+  background: var(--accents-2);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   color: var(--accents-6);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .hour-pill:hover {
-  background: var(--accents-2);
+  background: var(--accents-3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .hour-pill.active {
-  background: var(--fg);
-  color: var(--bg);
-  border-color: var(--fg);
+  background: linear-gradient(135deg, var(--sunny-orange) 0%, var(--warm-yellow) 100%);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
 }
 
 /* Main Content Layout */
@@ -243,11 +249,15 @@ main.main-app h1 {
 }
 
 .left-panel {
-  flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
   min-width: 0;
   border-right: 1px solid var(--accents-2);
+}
+
+.main-content.map-visible .left-panel {
+  width: 50%;
 }
 
 .right-panel {
@@ -263,21 +273,36 @@ main.main-app h1 {
 }
 
 .map-toggle {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
-  padding: 8px 16px;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  padding: 12px 18px;
   background: var(--bg);
-  border: 1px solid var(--accents-3);
-  border-radius: 6px;
-  font-size: 12px;
+  border: 2px solid var(--remix);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  color: var(--remix);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.map-toggle-desktop {
+  display: block;
+}
+
+.map-toggle-mobile {
+  display: none;
 }
 
 .map-toggle:hover {
-  background: var(--accents-1);
+  background: var(--remix);
+  color: var(--bg);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(246, 173, 85, 0.4);
 }
 
 /* Cafe List */
@@ -292,9 +317,55 @@ main.main-app h1 {
   padding: 16px;
   border-bottom: 1px solid var(--accents-2);
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.search-sort-row {
+  display: flex;
+  gap: 12px;
   align-items: center;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 768px) {
+  .search-sort-row {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  
+  .map-toggle {
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+  
+  .map-toggle-desktop {
+    display: none;
+  }
+  
+  .map-toggle-mobile {
+    display: block;
+  }
+}
+
+.filter-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
 }
 
 .search-bar {
@@ -304,17 +375,19 @@ main.main-app h1 {
 
 .search-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 12px 16px;
   border: 1px solid var(--accents-3);
-  border-radius: 6px;
+  border-radius: 24px;
   background: var(--bg);
   color: var(--fg);
   font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--remix);
+  box-shadow: 0 0 0 3px rgba(246, 173, 85, 0.1);
 }
 
 .sort-controls {
@@ -322,15 +395,56 @@ main.main-app h1 {
   align-items: center;
   gap: 8px;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .sort-select {
-  padding: 6px 8px;
+  padding: 8px 12px;
   border: 1px solid var(--accents-3);
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--bg);
   color: var(--fg);
+  font-size: 13px;
+  min-width: 120px;
+}
+
+.filter-pill {
+  padding: 6px 12px;
+  border: 1px solid var(--accents-3);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--accents-6);
   font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-pill:hover {
+  background: var(--accents-2);
+  border-color: var(--accents-4);
+}
+
+.filter-pill.active {
+  background: var(--remix);
+  color: white;
+  border-color: var(--remix);
+}
+
+.clear-filters {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accents-3);
+  color: var(--accents-7);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.clear-filters:hover {
+  background: var(--accents-4);
 }
 
 .cafe-count {
@@ -348,21 +462,23 @@ main.main-app h1 {
 
 /* Cafe Cards */
 .cafe-card {
-  border: 1px solid var(--accents-2);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  transition: all 0.2s ease;
+  border: none;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
   background: var(--bg);
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .cafe-card:hover {
-  border-color: var(--accents-4);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
 
 .cafe-card.selected {
-  border-color: var(--remix);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(246, 173, 85, 0.3);
   background: var(--accents-1);
 }
 
@@ -408,7 +524,7 @@ main.main-app h1 {
 .cafe-address-preview {
   font-size: 12px;
   color: var(--accents-5);
-  truncate: ellipsis;
+  text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
 }
@@ -416,7 +532,26 @@ main.main-app h1 {
 .cafe-card-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+}
+
+.show-map-icon-button {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--accents-5);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.show-map-icon-button:hover {
+  background: var(--accents-2);
+  color: var(--remix);
+  transform: scale(1.1);
 }
 
 .sun-score-compact {
@@ -522,6 +657,32 @@ main.main-app h1 {
   color: var(--accents-4);
   text-align: right;
   font-family: monospace;
+}
+
+.cafe-location-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.cafe-distance {
+  font-size: 10px;
+  color: #007acc;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.cafe-meta-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cafe-distance-preview {
+  font-size: 10px;
+  color: #007acc;
+  font-weight: 500;
 }
 
 .load-more-container {
@@ -637,11 +798,51 @@ main.main-app h1 {
 
 /* Responsive */
 @media (max-width: 768px) {
+
   .weather-header {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .weather-info {
+    align-self: center;
+    text-align: center;
+  }
+  
+  .time-slider {
+    width: 100%;
     flex-direction: column;
+    align-items: center;
     gap: 12px;
-    align-items: flex-start;
-    padding: 12px 16px;
+  }
+  
+  .slider-label {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  
+  .hour-pills {
+    justify-content: center;
+    gap: 6px;
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    grid-gap: 6px;
+  }
+  
+  .hour-pill {
+    padding: 8px 6px;
+    font-size: 11px;
+    min-width: auto;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .main-content.map-visible .left-panel {
+    width: 0;
   }
   
   .right-panel.visible {
@@ -653,14 +854,23 @@ main.main-app h1 {
     z-index: 20;
   }
   
-  .list-controls {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 12px;
+  .search-bar {
+    min-width: auto;
+    flex: 1;
   }
   
-  .hour-pills {
-    flex-wrap: wrap;
+  .sort-select {
+    min-width: 100px;
+    font-size: 12px;
+  }
+  
+  .filter-pills {
+    justify-content: center;
+  }
+  
+  .filter-pill {
+    font-size: 11px;
+    padding: 5px 10px;
   }
   
   main.main-app h1 {

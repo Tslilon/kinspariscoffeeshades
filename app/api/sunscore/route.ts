@@ -71,17 +71,70 @@ async function fetchCafes() {
 }
 
 function computeCafeOrientation(cafe: any): number {
-  // Phase 1 heuristic: basic orientation guess
-  // For now, assume most Parisian cafés face south/southwest (good sun exposure)
-  // In Phase 1.1, we'll use building edges and road bearings
+  // Phase 1.1: improved orientation detection
   
-  // Simple heuristic based on location:
-  // - Cafés near major boulevards often face the street
-  // - Most Paris streets run roughly E-W or N-S
-  // - Default to south-facing (180°) for best sun exposure
+  // If café has outdoor seating info, try to determine orientation
+  if (cafe.tags?.outdoor_seating === "yes") {
+    // Heuristic: cafés with outdoor seating often face main streets
+    // Use location-based heuristics for Paris street grid
+    
+    const lat = cafe.lat;
+    const lon = cafe.lon;
+    
+    // Major east-west boulevards (cafés likely face south/north)
+    const eastWestStreets = [
+      { name: "Champs-Élysées", lat: 48.8698, facingDir: 180 }, // faces south
+      { name: "Boulevard Saint-Germain", lat: 48.8533, facingDir: 180 },
+      { name: "Boulevard de la Bastille", lat: 48.8534, facingDir: 180 },
+      { name: "Rue de Rivoli", lat: 48.8593, facingDir: 180 }
+    ];
+    
+    // Major north-south avenues (cafés likely face east/west)  
+    const northSouthStreets = [
+      { name: "Boulevard Saint-Michel", lon: 2.3438, facingDir: 270 }, // faces west
+      { name: "Avenue des Champs-Élysées", lon: 2.3084, facingDir: 90 }, // faces east
+      { name: "Boulevard de Sébastopol", lon: 2.3483, facingDir: 270 }
+    ];
+    
+    // Find closest major street and use its facing direction
+    let closestDist = Infinity;
+    let bestOrientation = 180; // default south
+    
+    for (const street of eastWestStreets) {
+      const dist = Math.abs(lat - street.lat);
+      if (dist < closestDist && dist < 0.01) { // within ~1km
+        closestDist = dist;
+        bestOrientation = street.facingDir;
+      }
+    }
+    
+    for (const street of northSouthStreets) {
+      const dist = Math.abs(lon - street.lon);
+      if (dist < closestDist && dist < 0.01) {
+        closestDist = dist;
+        bestOrientation = street.facingDir;
+      }
+    }
+    
+    return bestOrientation;
+  }
   
-  const defaultAzimuth = 180; // degrees, facing south
-  return defaultAzimuth;
+  // Default heuristic based on location in Paris
+  // Most cafés in central Paris face south or southwest for optimal light
+  const lat = cafe.lat;
+  const lon = cafe.lon;
+  
+  // Left Bank (south of Seine) - many face north toward river
+  if (lat < 48.855) {
+    return 0; // faces north
+  }
+  
+  // Right Bank - default to south/southwest
+  if (lon < 2.35) {
+    return 225; // southwest
+  } else {
+    return 180; // south
+  }
 }
 
 function computeSunScore(
@@ -89,7 +142,9 @@ function computeSunScore(
   sunElevation: number, // radians  
   cafeOrientation: number, // degrees
   cloudCover: number, // 0-100
-  directRadiation: number // W/m²
+  directRadiation: number, // W/m²
+  cafeLat: number = 48.8566, // café latitude
+  cafeLon: number = 2.3522  // café longitude
 ): number {
   const sunAzimuthDeg = deg(sunAzimuth);
   const sunElevationDeg = deg(sunElevation);
@@ -112,9 +167,36 @@ function computeSunScore(
   // Direct radiation bonus (if available)
   const radiationBonus = directRadiation > 100 ? 1.1 : 1.0;
   
-  // Basic shadow penalty (Phase 1: very simple)
-  // In dense Paris areas, assume some shadow risk
-  const shadowPenalty = 0.9; // 10% penalty for potential shadows
+  // Phase 1.1: Enhanced shadow penalty based on location and sun angle
+  let shadowPenalty = 1.0; // start with no penalty
+  
+  // Get café location for context
+  const cafeContext = { lat: cafeLat, lon: cafeLon };
+  
+  // Dense urban areas have more shadow risk
+  const isDenseArea = (lat: number, lon: number) => {
+    // Central Paris arrondissements (1st-4th) are very dense
+    const isCentral = lat > 48.85 && lat < 48.87 && lon > 2.32 && lon < 2.37;
+    // Business districts (La Défense area) are tall
+    const isBusinessDistrict = lat > 48.88 && lon < 2.25;
+    // Montparnasse area has tall buildings
+    const isMontparnasse = lat > 48.84 && lat < 48.85 && lon > 2.32 && lon < 2.33;
+    
+    return isCentral || isBusinessDistrict || isMontparnasse;
+  };
+  
+  // Time-based shadow risk (early morning and late afternoon have longer shadows)
+  const elevationDegrees = deg(sunElevation);
+  const timeBasedShadowRisk = elevationDegrees < 20 ? 0.8 : 1.0; // low sun = more shadows
+  
+  // Dense area penalty
+  const locationPenalty = isDenseArea(cafeContext.lat, cafeContext.lon) ? 0.85 : 0.95;
+  
+  // Street orientation penalty (north-facing cafés get less direct sun)
+  const orientationPenalty = cafeOrientation === 0 ? 0.8 : 1.0; // north-facing penalty
+  
+  // Combine all shadow factors
+  shadowPenalty = timeBasedShadowRisk * locationPenalty * orientationPenalty;
   
   let score = facingScore * elevScore * cloudPenalty * radiationBonus * shadowPenalty;
   
@@ -161,7 +243,9 @@ export async function GET(request: Request) {
           elevation,
           cafeOrientation,
           weather.cloudCover,
-          weather.directRadiation
+          weather.directRadiation,
+          cafe.lat,
+          cafe.lon
         );
         
         scoreByHour.push(score);
@@ -186,7 +270,7 @@ export async function GET(request: Request) {
         totalCafes: cafesWithScores.length,
         hoursComputed: maxHours,
         weatherSource: "open-meteo",
-        orientationMethod: "heuristic-v1"
+        orientationMethod: "street-based-v1.1"
       }
     };
     

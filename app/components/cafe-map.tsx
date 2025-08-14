@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Map, { Marker, Popup } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -21,18 +21,44 @@ type CafeMapProps = {
 };
 
 export function CafeMap({ cafes, selectedHour, selectedCafe, onCafeSelect }: CafeMapProps) {
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [viewState, setViewState] = useState({
+    longitude: 2.3522,
+    latitude: 48.8566,
+    zoom: 12
+  });
+  const mapRef = useRef<any>(null);
+  
   const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY || "get_your_own_OpIi9ZULNHzrESv6T2vL";
+  
+  // Debug: log if we're using the default key
+  if (maptilerKey === "get_your_own_OpIi9ZULNHzrESv6T2vL") {
+    console.warn("Using default MapTiler key - map may not work properly");
+  }
   
   const mapStyle = `https://api.maptiler.com/maps/streets/style.json?key=${maptilerKey}`;
 
+  // Auto-focus on selected café
+  useEffect(() => {
+    if (selectedCafe && mapRef.current) {
+      const map = mapRef.current.getMap();
+      map.flyTo({
+        center: [selectedCafe.lon, selectedCafe.lat],
+        zoom: 16,
+        duration: 1000,
+        essential: true
+      });
+    }
+  }, [selectedCafe]);
+
   const markers = useMemo(() => {
     const getMarkerColor = (cafe: Cafe) => {
-      const label = cafe.labelByHour?.[selectedHour] || "cloudOn";
+      const label = cafe.labelByHour?.[selectedHour] || "☁️";
       switch (label) {
-        case "sun": return "#ff6b35"; // sunny orange
-        case "cloudSun": return "#f7931e"; // mixed yellow-orange  
-        case "cloudOn": return "#6c757d"; // shade gray
-        case "bedtime": return "#4a4a4a"; // after dark
+        case "☀️": return "#ff6b35"; // sunny orange
+        case "⛅": return "#f7931e"; // mixed yellow-orange  
+        case "☁️": return "#6c757d"; // shade gray
+        case "🌙": return "#4a4a4a"; // after dark
         default: return "#6c757d";
       }
     };
@@ -63,17 +89,41 @@ export function CafeMap({ cafes, selectedHour, selectedCafe, onCafeSelect }: Caf
     ));
   }, [cafes, selectedHour, selectedCafe, onCafeSelect]);
 
+  if (mapError) {
+    return (
+      <div className="cafe-map-container">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          textAlign: 'center',
+          color: 'var(--accents-5)',
+          padding: '20px'
+        }}>
+          <div>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺️</div>
+            <div style={{ marginBottom: '8px' }}>Map unavailable</div>
+            <div style={{ fontSize: '12px' }}>{mapError}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="cafe-map-container">
       <Map
-        initialViewState={{
-          longitude: 2.3522,
-          latitude: 48.8566,
-          zoom: 12
-        }}
+        ref={mapRef}
+        {...viewState}
+        onMove={evt => setViewState(evt.viewState)}
         style={{ width: "100%", height: "100%" }}
         mapStyle={mapStyle}
         onClick={() => onCafeSelect(null)}
+        onError={(error) => {
+          console.error("Map error:", error);
+          setMapError("Map failed to load. Please check your connection.");
+        }}
       >
         {markers}
         
@@ -90,7 +140,7 @@ export function CafeMap({ cafes, selectedHour, selectedCafe, onCafeSelect }: Caf
               <h4>{selectedCafe.name || "Unnamed Café"}</h4>
               <div className="popup-details">
                 <div className="sun-info">
-                  Current: {selectedCafe.labelByHour?.[selectedHour] || "▢"}
+                  Current: {selectedCafe.labelByHour?.[selectedHour] || "☁️"}
                   {selectedCafe.scoreByHour?.[selectedHour] && (
                     <span className="score">
                       ({(selectedCafe.scoreByHour[selectedHour] * 100).toFixed(0)}%)
