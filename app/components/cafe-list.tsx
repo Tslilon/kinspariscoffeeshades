@@ -24,6 +24,8 @@ type CafeListProps = {
   selectedCafe: Cafe | null;
   userLocation?: {lat: number, lon: number} | null;
   onShowOnMap?: (cafe: Cafe) => void;
+  favorites: Set<string>;
+  onToggleFavorite: (cafeId: string) => void;
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -38,7 +40,9 @@ export function CafeList({
   onCafeSelect,
   selectedCafe,
   userLocation,
-  onShowOnMap
+  onShowOnMap,
+  favorites,
+  onToggleFavorite
 }: CafeListProps) {
   
   const [expandedCafes, setExpandedCafes] = useState<Set<string>>(new Set());
@@ -52,6 +56,7 @@ export function CafeList({
   };
 
   const availableFilters = [
+    { id: 'favorites', label: '❤️ Favorites', key: 'favorites' },
     { id: 'outdoor_seating', label: 'Outdoor', key: 'outdoor_seating' },
     { id: 'wifi', label: 'WiFi', key: 'internet_access' },
     { id: 'vegan', label: 'Vegan', key: 'diet:vegan' },
@@ -149,6 +154,9 @@ export function CafeList({
       // Apply amenity filters
       if (activeFilters.size > 0) {
         const hasAllFilters = Array.from(activeFilters).every(filterId => {
+          if (filterId === 'favorites') {
+            return favorites.has(cafe.id);
+          }
           const filter = availableFilters.find(f => f.id === filterId);
           if (!filter) return true;
           return cafe.tags?.[filter.key] === "yes";
@@ -294,6 +302,16 @@ export function CafeList({
                 
                 <div className="cafe-card-right">
                   <button
+                    className={`favorite-button ${favorites.has(cafe.id) ? 'favorited' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite(cafe.id);
+                    }}
+                    title={favorites.has(cafe.id) ? 'Remove from Favorites' : 'Add to Favorites'}
+                  >
+                    {favorites.has(cafe.id) ? '❤️' : '🤍'}
+                  </button>
+                  <button
                     className="show-map-icon-button"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -357,7 +375,7 @@ export function CafeList({
 
                   <div className="cafe-location-info">
                     <div className="cafe-distance">
-                      📍 Distance: {distanceText} from Kin House
+                      📍 Distance: {distanceText} from Kin&apos;s House
                     </div>
                     <div className="cafe-coordinates">
                       📍 Coordinates: {cafe.lat.toFixed(4)}, {cafe.lon.toFixed(4)}

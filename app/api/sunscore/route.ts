@@ -30,11 +30,12 @@ async function fetchParisWeatherHourly(startTime: Date, hours: number) {
   const cloudCover = data.hourly?.cloudcover ?? [];
   const directRadiation = data.hourly?.direct_radiation ?? [];
   
-  // Find the starting hour index
-  const startHour = startTime.getHours();
+  // Find the starting hour index based on Paris time
+  const startHourParis = new Date(startTime.toLocaleString("en-US", {timeZone: "Europe/Paris"})).getHours();
   const startIndex = hourlyTimes.findIndex((time: string) => {
-    const hour = new Date(time).getHours();
-    return hour >= startHour;
+    // Parse the time string and get the hour
+    const hour = parseInt(time.split('T')[1].split(':')[0]);
+    return hour >= startHourParis;
   });
   
   if (startIndex === -1) return [];
@@ -42,8 +43,12 @@ async function fetchParisWeatherHourly(startTime: Date, hours: number) {
   const result = [];
   for (let i = 0; i < hours && (startIndex + i) < hourlyTimes.length; i++) {
     const idx = startIndex + i;
+    // Ensure the time is interpreted as Paris timezone
+    const timeStr = hourlyTimes[idx];
+    const parisTime = timeStr + (timeStr.includes('+') ? '' : '+02:00'); // Add timezone if missing
+    
     result.push({
-      time: hourlyTimes[idx],
+      time: parisTime,
       cloudCover: cloudCover[idx] ?? 0,
       directRadiation: directRadiation[idx] ?? 0,
     });
@@ -237,7 +242,7 @@ export async function GET(request: Request) {
         const weather = weatherData[i];
         const hourTime = new Date(weather.time);
         
-        const { azimuth, elevation } = sunAt(hourTime);
+        const { azimuth, elevation } = sunAt(hourTime, cafe.lat, cafe.lon);
         const score = computeSunScore(
           azimuth,
           elevation,
@@ -248,8 +253,10 @@ export async function GET(request: Request) {
           cafe.lon
         );
         
+        const afterSunset = isAfterSunset(hourTime, cafe.lat, cafe.lon);
+        
         scoreByHour.push(score);
-        labelByHour.push(labelFromScore(score, isAfterSunset(hourTime)));
+        labelByHour.push(labelFromScore(score, afterSunset));
       }
       
       cafesWithScores.push({

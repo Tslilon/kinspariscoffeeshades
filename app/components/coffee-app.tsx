@@ -24,6 +24,8 @@ export function CoffeeApp() {
   const [selectedCafe, setSelectedCafe] = useState<Cafe | null>(null);
   const [mapVisible, setMapVisible] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
+  const [precisionMode, setPrecisionMode] = useState(true);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   // Get user location
   useEffect(() => {
@@ -56,6 +58,39 @@ export function CoffeeApp() {
     }
   }, []);
 
+  // Load favorites from localStorage
+  useEffect(() => {
+    try {
+      const savedFavorites = localStorage.getItem('kin-coffee-favorites');
+      if (savedFavorites) {
+        setFavorites(new Set(JSON.parse(savedFavorites)));
+      }
+    } catch (error) {
+      console.error('Failed to load favorites:', error);
+    }
+  }, []);
+
+  // Save favorites to localStorage
+  const saveFavorites = (newFavorites: Set<string>) => {
+    try {
+      localStorage.setItem('kin-coffee-favorites', JSON.stringify(Array.from(newFavorites)));
+      setFavorites(newFavorites);
+    } catch (error) {
+      console.error('Failed to save favorites:', error);
+    }
+  };
+
+  // Toggle favorite
+  const toggleFavorite = (cafeId: string) => {
+    const newFavorites = new Set(favorites);
+    if (newFavorites.has(cafeId)) {
+      newFavorites.delete(cafeId);
+    } else {
+      newFavorites.add(cafeId);
+    }
+    saveFavorites(newFavorites);
+  };
+
   // Fetch initial data
   useEffect(() => {
     async function loadData() {
@@ -75,6 +110,26 @@ export function CoffeeApp() {
         
         if (sunData.cafes) {
           setSunScoreData(sunData);
+          
+          // Set selectedHour to current Paris time
+          if (sunData.hours) {
+            const currentParisTime = new Date().toLocaleString("en-US", {timeZone: "Europe/Paris"});
+            const currentHour = new Date(currentParisTime).getHours();
+            
+            // Find the closest hour in the forecast
+            let bestMatch = 0;
+            let minDiff = Infinity;
+            sunData.hours.forEach((hourISO: string, index: number) => {
+              const forecastHour = new Date(hourISO).getHours();
+              const diff = Math.abs(forecastHour - currentHour);
+              if (diff < minDiff) {
+                minDiff = diff;
+                bestMatch = index;
+              }
+            });
+            setSelectedHour(bestMatch);
+          }
+          
           // Merge sun score data with cafes
           const mergedCafes = cafesData.cafes?.map((cafe: Cafe) => {
             const sunCafe = sunData.cafes.find((sc: any) => sc.id === cafe.id);
@@ -172,6 +227,8 @@ export function CoffeeApp() {
             selectedCafe={selectedCafe}
             userLocation={userLocation}
             onShowOnMap={handleShowOnMap}
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
           />
         </div>
         
@@ -197,6 +254,44 @@ export function CoffeeApp() {
               onCafeSelect={setSelectedCafe}
             />
           )}
+        </div>
+      </div>
+      
+      {/* Precision Mode Toggle - Bottom Left */}
+      <div className="precision-toggle-container">
+        <div className="precision-toggle-wrapper">
+          <button
+            className={`precision-toggle ${precisionMode ? 'precision' : 'heuristic'}`}
+            onClick={() => setPrecisionMode(!precisionMode)}
+            aria-label="Toggle calculation mode"
+          >
+            <span className="toggle-indicator"></span>
+            <span className="toggle-label">{precisionMode ? 'P' : 'H'}</span>
+          </button>
+          <div className="precision-tooltip">
+            <div className="tooltip-content">
+              <div className="tooltip-header">
+                <strong>{precisionMode ? 'Precision Mode' : 'Heuristic Mode'}</strong>
+              </div>
+              <div className="tooltip-body">
+                {precisionMode ? (
+                  <>
+                    <div>🎯 <strong>High-accuracy calculations</strong></div>
+                    <div>• Real shadow analysis</div>
+                    <div>• 2-5m resolution accuracy</div>
+                    <div>• Uses precomputed data</div>
+                  </>
+                ) : (
+                  <>
+                    <div>📐 <strong>Fast approximations</strong></div>
+                    <div>• Street-based orientation</div>
+                    <div>• General shadow estimates</div>
+                    <div>• Real-time calculations</div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

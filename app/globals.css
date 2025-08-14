@@ -685,6 +685,187 @@ main.main-app h1 {
   font-weight: 500;
 }
 
+/* Precision Mode Toggle - Bottom Left */
+.precision-toggle-container {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.precision-toggle-wrapper {
+  position: relative;
+}
+
+.precision-toggle {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--accents-3);
+  background: var(--bg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accents-5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.precision-toggle:hover {
+  border-color: var(--accents-4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.precision-toggle.precision {
+  border-color: #007acc;
+  color: #007acc;
+  background: rgba(0, 122, 204, 0.05);
+}
+
+.precision-toggle.heuristic {
+  border-color: #ff6b35;
+  color: #ff6b35;
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.precision-toggle .toggle-indicator {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.precision-toggle.precision .toggle-indicator {
+  background: #007acc;
+}
+
+.precision-toggle.heuristic .toggle-indicator {
+  background: #ff6b35;
+}
+
+.precision-toggle .toggle-label {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Tooltip */
+.precision-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 100%;
+  transform: translateX(-20px) translateY(-8px);
+  margin-bottom: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.precision-toggle-wrapper:hover .precision-tooltip {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.tooltip-content {
+  background: var(--bg);
+  border: 1px solid var(--accents-2);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 200px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tooltip-header {
+  margin-bottom: 8px;
+  color: var(--foreground);
+}
+
+.tooltip-body {
+  color: var(--accents-5);
+}
+
+.tooltip-body > div {
+  margin-bottom: 4px;
+}
+
+.tooltip-body > div:last-child {
+  margin-bottom: 0;
+}
+
+/* Tooltip arrow */
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 20px;
+  border: 6px solid transparent;
+  border-top-color: var(--bg);
+}
+
+.tooltip-content::before {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 19px;
+  border: 7px solid transparent;
+  border-top-color: var(--accents-2);
+}
+
+/* Favorite Button */
+.favorite-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 18px;
+  transition: transform 0.2s ease;
+  border-radius: 4px;
+}
+
+.favorite-button:hover {
+  transform: scale(1.1);
+  background: var(--accents-1);
+}
+
+.favorite-button.favorited {
+  animation: heartBeat 0.3s ease;
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Footer Centering */
+footer {
+  text-align: center;
+  padding: 20px;
+  color: var(--accents-4);
+  border-top: 1px solid var(--accents-2);
+  margin-top: 40px;
+}
+
+footer p {
+  margin: 0;
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  footer {
+    text-align: center;
+  }
+}
+
 .load-more-container {
   padding: 16px;
   text-align: center;
