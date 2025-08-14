@@ -29,14 +29,25 @@ export function CafeMap({ cafes, selectedHour, selectedCafe, onCafeSelect }: Caf
   });
   const mapRef = useRef<any>(null);
   
-  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY || "get_your_own_OpIi9ZULNHzrESv6T2vL";
-  
-  // Debug: log if we're using the default key
-  if (maptilerKey === "get_your_own_OpIi9ZULNHzrESv6T2vL") {
-    console.warn("Using default MapTiler key - map may not work properly");
-  }
-  
-  const mapStyle = `https://api.maptiler.com/maps/streets/style.json?key=${maptilerKey}`;
+  // Always use OpenStreetMap due to MapTiler CORS issues
+  const mapStyle = {
+    "version": 8 as const,
+    "sources": {
+      "osm": {
+        "type": "raster" as const,
+        "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        "tileSize": 256,
+        "attribution": "© OpenStreetMap contributors"
+      }
+    },
+    "layers": [
+      {
+        "id": "osm",
+        "type": "raster" as const,
+        "source": "osm"
+      }
+    ]
+  };
 
   // Auto-focus on selected café
   useEffect(() => {
@@ -122,7 +133,7 @@ export function CafeMap({ cafes, selectedHour, selectedCafe, onCafeSelect }: Caf
         onClick={() => onCafeSelect(null)}
         onError={(error) => {
           console.error("Map error:", error);
-          setMapError("Map failed to load. Please check your connection.");
+          setMapError("Map temporarily unavailable. Showing café list only.");
         }}
       >
         {markers}

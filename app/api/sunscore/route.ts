@@ -240,25 +240,20 @@ async function computeHybridSunScore(
   let method: 'voxcity' | 'heuristic' = 'heuristic';
   let confidence = 0.7; // default heuristic confidence
   
-  // Try VoxCity precision mode first
-  if (usePrecision) {
-    try {
-      const voxResult = await getVoxShadowValue(cafeLat, cafeLon, hourTime);
-
-      if (voxResult.precision === 'voxcity') {
-        shadowFactor = voxResult.shadowValue; // 0-1, already normalized
-        method = 'voxcity';
-        confidence = voxResult.confidence;
-        console.log(`✅ Using VoxCity result: ${shadowFactor}`);
-      } else {
-        console.log(`🔄 VoxCity returned heuristic, using fallback`);
-      }
-    } catch (error) {
-      console.warn('VoxCity lookup failed, falling back to heuristic:', error);
-    }
-  } else {
-    console.log(`⚠️ Precision mode disabled, skipping VoxCity`);
-  }
+   // Try VoxCity precision mode first (with reduced logging)
+   if (usePrecision) {
+     try {
+       const voxResult = await getVoxShadowValue(cafeLat, cafeLon, hourTime);
+ 
+       if (voxResult.precision === 'voxcity') {
+         shadowFactor = voxResult.shadowValue; // 0-1, already normalized
+         method = 'voxcity';
+         confidence = voxResult.confidence;
+       }
+     } catch (error) {
+       // Silently fall back to heuristic
+     }
+   }
   
   // Fallback to heuristic shadow calculation if VoxCity unavailable
   if (method === 'heuristic') {

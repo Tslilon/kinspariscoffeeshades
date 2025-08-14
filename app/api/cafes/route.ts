@@ -47,16 +47,11 @@ async function loadSeed(): Promise<any> {
   return JSON.parse(seedTxt);
 }
 
-// Enhanced Overpass query for cafes + nearby buildings for orientation detection
+// Simple Overpass query for cafes (back to working version)
 async function fetchOverpassCafes(): Promise<Cafe[]> {
   const query = `
-[out:json][timeout:45];
-(
-  node["amenity"="cafe"](48.8156,2.2242,48.9022,2.4699);
-  way["amenity"="cafe"](48.8156,2.2242,48.9022,2.4699);
-  relation["amenity"="cafe"](48.8156,2.2242,48.9022,2.4699);
-);
-(._;>;);
+[out:json][timeout:30];
+node["amenity"="cafe"](48.8156,2.2242,48.9022,2.4699);
 out body;
 `;
 
@@ -94,32 +89,14 @@ out body;
     const json = await res.json();
     
     const cafes: Cafe[] = (json?.elements ?? [])
-      .filter((el: any) => el.tags?.amenity === "cafe")
-      .map((el: any) => {
-        let lat, lon;
-        
-        if (el.type === "node") {
-          lat = el.lat;
-          lon = el.lon;
-        } else if (el.type === "way" && el.center) {
-          lat = el.center.lat;
-          lon = el.center.lon;
-        } else if (el.type === "relation" && el.center) {
-          lat = el.center.lat;
-          lon = el.center.lon;
-        } else {
-          return null; // Skip if no coordinate data
-        }
-        
-        return {
-          id: `${el.type}/${el.id}`,
-          name: el.tags?.name ?? null,
-          lat,
-          lon,
-          tags: el.tags,
-        };
-      })
-      .filter(Boolean) as Cafe[];
+      .filter((el: any) => el.type === "node" && el.tags?.amenity === "cafe")
+      .map((el: any) => ({
+        id: `node/${el.id}`,
+        name: el.tags?.name ?? null,
+        lat: el.lat,
+        lon: el.lon,
+        tags: el.tags,
+      }));
       
     return cafes;
   } finally {
@@ -128,11 +105,38 @@ out body;
 }
 
 export async function GET() {
-  // TEMPORARY: Force use of seed data for VoxCity testing
-  // This ensures we only use cafes that have VoxCity tile coverage
+  // 1. Check cache first
+  const cached = await readCache();
+  if (cached) {
+    return new Response(JSON.stringify(cached), {
+      headers: { "content-type": "application/json", "x-cache": "HIT" },
+    });
+  }
+
+  // 2. Try to fetch fresh data from Overpass
+  try {
+    const cafes = await fetchOverpassCafes();
+    if (cafes.length > 0) {
+      const payload = {
+        updatedAt: new Date().toISOString(),
+        count: cafes.length,
+        source: "overpass",
+        cafes,
+      };
+      await writeCache(payload);
+      return new Response(JSON.stringify(payload), {
+        headers: { "content-type": "application/json", "x-cache": "MISS" },
+      });
+    }
+  } catch (err) {
+    console.error("Overpass fetch failed:", err);
+  }
+
+  // 3. Fall back to seed data
   try {
     const seed = await loadSeed();
     const payload = { ...seed, source: "seed" };
+    await writeCache(payload); // cache seed for next time
     return new Response(JSON.stringify(payload), {
       headers: { "content-type": "application/json", "x-cache": "SEED" },
     });

@@ -23,10 +23,31 @@ export function CoffeeApp() {
   const [loading, setLoading] = useState(true);
   const [selectedCafe, setSelectedCafe] = useState<Cafe | null>(null);
   const [mapVisible, setMapVisible] = useState(false);
+  
+  // Set map visible by default on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMapVisible(true);
+      } else {
+        setMapVisible(false);
+      }
+    };
+    
+    // Set initial state
+    handleResize();
+    
+    // Listen for resize events
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
   const [precisionMode, setPrecisionMode] = useState(true);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [voxCityStatus, setVoxCityStatus] = useState<any>(null);
+
+  // Map starts hidden by default - user can toggle
+  // (Removed auto-show on desktop to fix layout issues)
 
   // Get user location
   useEffect(() => {
@@ -240,12 +261,7 @@ export function CoffeeApp() {
           onClick={() => setMapVisible(!mapVisible)}
           title={mapVisible ? 'Hide Map' : 'Show Map'}
         >
-          <span className="map-toggle-desktop">
-            {mapVisible ? '← Hide Map' : 'Show Map →'}
-          </span>
-          <span className="map-toggle-mobile">
-            {mapVisible ? '✕' : '🗺️'}
-          </span>
+          {mapVisible ? '✕' : '▶'}
         </button>
         
         <div className={`right-panel ${mapVisible ? 'visible' : ''}`}>
@@ -283,13 +299,13 @@ export function CoffeeApp() {
                       <div>• Real shadow analysis</div>
                       <div>• 2-5m resolution accuracy</div>
                       <div>• Uses precomputed data</div>
-                      {voxCityStatus && (
+                      {/* {voxCityStatus && (
                         <div className="voxcity-status">
                           <div>📊 <strong>VoxCity Coverage: {voxCityStatus.precisionCoverage}</strong></div>
                           <div>• Precision calculations: {voxCityStatus.voxCityCalculations}</div>
                           <div>• Heuristic fallbacks: {voxCityStatus.heuristicFallbacks}</div>
                         </div>
-                      )}
+                      )} */}
                     </>
                   ) : (
                     <>

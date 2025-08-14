@@ -57,6 +57,8 @@ export function CafeList({
 
   const availableFilters = [
     { id: 'favorites', label: '❤️ Favorites', key: 'favorites' },
+    { id: 'sunny', label: 'Sunny', key: 'sunny' },
+    { id: 'partial', label: 'Partial Sun', key: 'partial' },
     { id: 'outdoor_seating', label: 'Outdoor', key: 'outdoor_seating' },
     { id: 'wifi', label: 'WiFi', key: 'internet_access' },
     { id: 'vegan', label: 'Vegan', key: 'diet:vegan' },
@@ -151,12 +153,25 @@ export function CafeList({
         return false;
       }
       
-      // Apply amenity filters
+      // Apply amenity and sun filters
       if (activeFilters.size > 0) {
         const hasAllFilters = Array.from(activeFilters).every(filterId => {
           if (filterId === 'favorites') {
             return favorites.has(cafe.id);
           }
+          
+          // Sun level filters
+          if (filterId === 'sunny' || filterId === 'partial') {
+            const currentLabel = cafe.labelByHour?.[selectedHour];
+            if (filterId === 'sunny') {
+              return currentLabel === '☀️';
+            }
+            if (filterId === 'partial') {
+              return currentLabel === '⛅';
+            }
+          }
+          
+          // Amenity filters
           const filter = availableFilters.find(f => f.id === filterId);
           if (!filter) return true;
           return cafe.tags?.[filter.key] === "yes";
@@ -225,6 +240,7 @@ export function CafeList({
               <button
                 key={filter.id}
                 className={`filter-pill ${activeFilters.has(filter.id) ? 'active' : ''}`}
+                data-filter={filter.id}
                 onClick={() => toggleFilter(filter.id)}
               >
                 {filter.label}
@@ -287,11 +303,9 @@ export function CafeList({
                     )}
                   </div>
                   <div className="cafe-meta-preview">
-                    {address && (
-                      <div className="cafe-address-preview">
-                        📍 {address}
-                      </div>
-                    )}
+                    <div className="cafe-address-preview">
+                      📍 {address || 'Address not available'}
+                    </div>
                     {sortBy === "distance" && (
                       <div className="cafe-distance-preview">
                         🚶 {distanceText}
@@ -386,18 +400,18 @@ export function CafeList({
             </div>
           );
         })}
+        
+        {hasMore && (
+          <div className="load-more-container">
+            <button
+              className="load-more-button"
+              onClick={() => setDisplayCount(prev => prev + ITEMS_PER_PAGE)}
+            >
+              Show More
+            </button>
+          </div>
+        )}
       </div>
-
-      {hasMore && (
-        <div className="load-more-container">
-          <button
-            className="load-more-button"
-            onClick={() => setDisplayCount(prev => prev + ITEMS_PER_PAGE)}
-          >
-            Show More
-          </button>
-        </div>
-      )}
 
       {filteredCafes.length === 0 && (
         <div className="empty-state">
