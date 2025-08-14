@@ -128,38 +128,11 @@ out body;
 }
 
 export async function GET() {
-  // 1. Check cache first
-  const cached = await readCache();
-  if (cached) {
-    return new Response(JSON.stringify(cached), {
-      headers: { "content-type": "application/json", "x-cache": "HIT" },
-    });
-  }
-
-  // 2. Try to fetch fresh data from Overpass
-  try {
-    const cafes = await fetchOverpassCafes();
-    if (cafes.length > 0) {
-      const payload = {
-        updatedAt: new Date().toISOString(),
-        count: cafes.length,
-        source: "overpass",
-        cafes,
-      };
-      await writeCache(payload);
-      return new Response(JSON.stringify(payload), {
-        headers: { "content-type": "application/json", "x-cache": "MISS" },
-      });
-    }
-  } catch (err) {
-    console.error("Overpass fetch failed:", err);
-  }
-
-  // 3. Fall back to seed data
+  // TEMPORARY: Force use of seed data for VoxCity testing
+  // This ensures we only use cafes that have VoxCity tile coverage
   try {
     const seed = await loadSeed();
     const payload = { ...seed, source: "seed" };
-    await writeCache(payload); // cache seed for next time
     return new Response(JSON.stringify(payload), {
       headers: { "content-type": "application/json", "x-cache": "SEED" },
     });

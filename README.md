@@ -7,7 +7,8 @@ A Next.js application that shows real-time sun exposure scores for Paris cafés,
 ## Features
 
 - **2,640+ Paris Cafés**: Real café data from OpenStreetMap
-- **Sun Exposure Scoring**: Live calculations using solar position + weather data
+- **High-Precision Shadow System**: VoxCity integration with 4m resolution precomputed shadow masks
+- **Hybrid Sun Scoring**: Combines VoxCity precision with heuristic fallback for complete coverage
 - **8-Hour Forecast**: See how sun exposure changes throughout the day
 - **Rich Café Data**: Opening hours, contact info, amenities, outdoor seating
 - **Interactive Map**: MapLibre GL with color-coded markers
@@ -21,6 +22,9 @@ A Next.js application that shows real-time sun exposure scores for Paris cafés,
 - ☁️ **Shade** (<30%): Overcast or shadowed
 - 🌙 **After Dark**: Post-sunset hours
 
+### VoxCity Precision Mode
+When available, uses precomputed shadow masks at 4-meter resolution for accurate building shadow calculations. Falls back to heuristic calculations for areas without coverage.
+
 ## Tech Stack
 
 - **Frontend**: Next.js 13 App Router, React, TypeScript
@@ -28,9 +32,10 @@ A Next.js application that shows real-time sun exposure scores for Paris cafés,
   - OpenStreetMap (Overpass API) for café data
   - Open-Meteo for weather and cloud cover
   - SunCalc for solar position calculations
+- **Shadow System**: VoxCity high-precision precomputed shadow masks (4m resolution)
 - **Mapping**: MapLibre GL + MapTiler tiles
 - **Deployment**: Vercel with Node.js runtime
-- **Caching**: 24h file cache for café data, 5min for sun scores
+- **Caching**: 24h file cache for café data, 5min for sun scores, in-memory VoxCity metadata
 
 ## Getting Started
 
@@ -73,8 +78,11 @@ A Next.js application that shows real-time sun exposure scores for Paris cafés,
 1. **Café Data**: Fetches cafés from OpenStreetMap Overpass API
 2. **Weather**: Gets hourly cloud cover from Open-Meteo
 3. **Sun Position**: Calculates solar azimuth/elevation using SunCalc
-4. **Scoring**: Combines sun angle, elevation, cloud cover, and basic shadow heuristics
-5. **Caching**: Café data cached 24h, sun scores cached 5min
+4. **Shadow Calculation**: 
+   - **VoxCity Mode**: Uses precomputed 4m-resolution shadow masks when available
+   - **Heuristic Mode**: Falls back to building orientation and distance calculations
+5. **Scoring**: Combines sun angle, elevation, cloud cover, and precise shadow data
+6. **Caching**: Café data cached 24h, sun scores cached 5min, VoxCity metadata cached in memory
 
 ## API Endpoints
 
@@ -86,22 +94,26 @@ A Next.js application that shows real-time sun exposure scores for Paris cafés,
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/kinspariscoffeeshades&env=NEXT_PUBLIC_MAPTILER_KEY&envDescription=Get%20your%20MapTiler%20API%20key&envLink=https://cloud.maptiler.com/account/keys/)
 
+## Recent Updates
+
+### ✅ VoxCity Integration Complete
+- High-precision shadow calculations (4m resolution)
+- 490 precomputed shadow tiles covering central Paris
+- Hybrid system with heuristic fallback
+- 25MB of optimized shadow mask data
+
 ## Roadmap
 
-### Phase 1.1 - Quality Improvements
-- Better orientation detection using building edges
-- Shadow penalties from nearby tall buildings
-- Distance sorting from Kin House location
-
-### Phase 2 - VoxCity Integration
-- High-precision shadow calculations
-- Precomputed shadow masks
-- 2-5m resolution accuracy
+### Phase 2.1 - Coverage Expansion
+- Expand VoxCity coverage to all Paris arrondissements
+- Add seasonal shadow variations
+- Optimize data loading and caching
 
 ### Phase 3 - Community Features
 - Save favorite cafés
 - User reviews and photos
 - Social sharing and recommendations
+- Real-time crowd density indicators
 
 ## Contributing
 

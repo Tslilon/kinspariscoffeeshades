@@ -1,0 +1,17 @@
+{
+  "tileId": "-28_-20",
+  "bounds": {
+    "north": 48.841,
+    "south": 48.8402,
+    "east": 2.3301999999999996,
+    "west": 2.3293999999999997
+  },
+  "resolution": 4,
+  "pixelWidth": 22,
+  "pixelHeight": 22,
+  "center": {
+    "lat": 48.8406,
+    "lon": 2.3297999999999996
+  },
+  "priority": true
+}

@@ -243,7 +243,6 @@ async function computeHybridSunScore(
   // Try VoxCity precision mode first
   if (usePrecision) {
     try {
-
       const voxResult = await getVoxShadowValue(cafeLat, cafeLon, hourTime);
 
       if (voxResult.precision === 'voxcity') {
@@ -336,7 +335,6 @@ export async function GET(request: Request) {
         const { azimuth, elevation } = sunAt(hourTime, cafe.lat, cafe.lon);
         
         // Use hybrid scoring (VoxCity + heuristic fallback)
-
         const { score, method, confidence } = await computeHybridSunScore(
           azimuth,
           elevation,

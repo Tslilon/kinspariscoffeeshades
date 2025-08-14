@@ -247,6 +247,8 @@ export async function getVoxShadowValue(
     console.log(`❌ Shadow mask not found for ${tileId}, month=${month}, slot=${timeSlot}`);
     const tileMasks = metadata.masks.filter(m => m.tileId === tileId);
     console.log(`Available masks for ${tileId}:`, tileMasks.map(m => `${m.month}-${m.slot}`).join(', '));
+    console.log(`Total masks in metadata:`, metadata.masks.length);
+    console.log(`Sample masks:`, metadata.masks.slice(0, 3).map(m => `${m.tileId}-${m.month}-${m.slot}`));
     return {
       precision: 'heuristic',
       shadowValue: 0,
@@ -258,7 +260,8 @@ export async function getVoxShadowValue(
   
   try {
     // Read the shadow mask JSON file
-    const maskFilename = `2024-${month.toString().padStart(2, '0')}-${timeSlot}.json`;
+    // Note: Use the URL from the shadow mask metadata instead of constructing filename
+    const maskFilename = shadowMask.url.split('/').pop();
     let maskData;
     
     if (typeof window === 'undefined') {

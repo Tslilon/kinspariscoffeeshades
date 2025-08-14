@@ -25,6 +25,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
 
 # vercel
 .vercel
@@ -33,5 +34,3 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# VoxCity generated data - these are built during prebuild
-/public/vox/
