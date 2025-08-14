@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 type Cafe = {
   id: string;
   name: string | null;
@@ -21,6 +23,8 @@ type CafeListProps = {
   selectedCafe: Cafe | null;
 };
 
+const ITEMS_PER_PAGE = 10;
+
 export function CafeList({
   cafes,
   selectedHour,
@@ -32,14 +36,13 @@ export function CafeList({
   selectedCafe
 }: CafeListProps) {
   
+  const [expandedCafes, setExpandedCafes] = useState<Set<string>>(new Set());
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  
   const getScoreDisplay = (cafe: Cafe) => {
-    const label = cafe.labelByHour?.[selectedHour] || "▢";
+    const label = cafe.labelByHour?.[selectedHour] || "cloudOn";
     const score = cafe.scoreByHour?.[selectedHour];
     return { label, score };
-  };
-
-  const hasOutdoorSeating = (cafe: Cafe) => {
-    return cafe.tags?.outdoor_seating === "yes";
   };
 
   const formatOpeningHours = (hours: string) => {
@@ -78,6 +81,58 @@ export function CafeList({
     return amenities;
   };
 
+  const renderSunIcon = (label: string, size: number = 24) => {
+    const iconStyle = { fontSize: `${size}px` };
+    
+    switch (label) {
+      case "sun":
+        return <span className="sun-icon" style={{ ...iconStyle, color: "#ff6b35" }}>☀️</span>;
+      case "cloudSun":
+        return <span className="sun-icon" style={{ ...iconStyle, color: "#f7931e" }}>⛅</span>;
+      case "cloudOn":
+        return <span className="sun-icon" style={{ ...iconStyle, color: "#6c757d" }}>☁️</span>;
+      case "bedtime":
+        return <span className="sun-icon" style={{ ...iconStyle, color: "#4a4a4a" }}>🌙</span>;
+      default:
+        return <span className="sun-icon" style={{ ...iconStyle, color: "#6c757d" }}>☁️</span>;
+    }
+  };
+
+  const toggleExpanded = (cafeId: string) => {
+    const newExpanded = new Set(expandedCafes);
+    if (newExpanded.has(cafeId)) {
+      newExpanded.delete(cafeId);
+    } else {
+      newExpanded.add(cafeId);
+    }
+    setExpandedCafes(newExpanded);
+  };
+
+  // Filter and sort cafes
+  const filteredCafes = cafes
+    .filter(cafe => 
+      !searchQuery || 
+      cafe.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return (a.name || "").localeCompare(b.name || "");
+        case "score":
+          const scoreA = a.scoreByHour?.[selectedHour] || 0;
+          const scoreB = b.scoreByHour?.[selectedHour] || 0;
+          return scoreB - scoreA;
+        case "distance":
+          // TODO: Implement distance sorting using KINHOUSE_COORDS
+          return 0;
+        default:
+          return 0;
+      }
+    });
+
+  const displayedCafes = filteredCafes.slice(0, displayCount);
+  const hasMore = displayCount < filteredCafes.length;
+
   return (
     <div className="cafe-list">
       <div className="list-controls">
@@ -106,90 +161,133 @@ export function CafeList({
       </div>
 
       <div className="cafe-count">
-        {cafes.length} cafés found
+        Showing {displayedCafes.length} of {filteredCafes.length} cafés
       </div>
 
       <div className="cafe-items">
-        {cafes.map((cafe) => {
+        {displayedCafes.map((cafe) => {
           const { label, score } = getScoreDisplay(cafe);
           const isSelected = selectedCafe?.id === cafe.id;
+          const isExpanded = expandedCafes.has(cafe.id);
           const address = getAddress(cafe);
           const amenities = getAmenities(cafe);
           const hours = formatOpeningHours(cafe.tags?.opening_hours);
           const phone = cafe.tags?.phone;
           const website = cafe.tags?.website;
+          const cafeName = cafe.name || "Unnamed Café";
           
           return (
             <div
               key={cafe.id}
-              className={`cafe-item ${isSelected ? 'selected' : ''}`}
-              onClick={() => onCafeSelect(isSelected ? null : cafe)}
+              className={`cafe-card ${isSelected ? 'selected' : ''} ${isExpanded ? 'expanded' : ''}`}
             >
-              <div className="cafe-header">
-                <div className="cafe-info">
-                  <div className="cafe-name">
-                    {cafe.name || "Unnamed Café"}
+              <div 
+                className="cafe-card-header"
+                onClick={() => toggleExpanded(cafe.id)}
+              >
+                <div className="cafe-card-main">
+                  <div className="cafe-title">
+                    {website ? (
+                      <a 
+                        href={website} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="cafe-name-link"
+                      >
+                        {cafeName}
+                      </a>
+                    ) : (
+                      <span className="cafe-name">{cafeName}</span>
+                    )}
                   </div>
                   {address && (
-                    <div className="cafe-address">
+                    <div className="cafe-address-preview">
                       📍 {address}
                     </div>
                   )}
                 </div>
                 
-                <div className="sun-score">
-                  <div className={`sun-label ${label.replace('️', '')}`}>
-                    {label}
+                <div className="cafe-card-right">
+                  <div className="sun-score-compact">
+                    {renderSunIcon(label, 28)}
+                    {score !== undefined && (
+                      <div className="score-value">
+                        {(score * 100).toFixed(0)}%
+                      </div>
+                    )}
                   </div>
-                  {score !== undefined && (
-                    <div className="score-value">
-                      {(score * 100).toFixed(0)}%
-                    </div>
-                  )}
+                  <div className="expand-indicator">
+                    {isExpanded ? '▼' : '▶'}
+                  </div>
                 </div>
               </div>
 
-              {(hours || phone || website) && (
-                <div className="cafe-contact">
-                  {hours && (
-                    <div className="cafe-hours">
-                      🕒 {hours}
+              {isExpanded && (
+                <div className="cafe-card-content">
+                  {(hours || phone || website) && (
+                    <div className="cafe-contact">
+                      {hours && (
+                        <div className="cafe-hours">
+                          🕒 {hours}
+                        </div>
+                      )}
+                      {phone && (
+                        <div className="cafe-phone">
+                          📞 <a href={`tel:${phone}`}>{phone}</a>
+                        </div>
+                      )}
+                      {website && (
+                        <div className="cafe-website">
+                          🌐 <a href={website} target="_blank" rel="noopener noreferrer">
+                            {website.replace(/^https?:\/\//, '').split('/')[0]}
+                          </a>
+                        </div>
+                      )}
                     </div>
                   )}
-                  {phone && (
-                    <div className="cafe-phone">
-                      📞 <a href={`tel:${phone}`}>{phone}</a>
+
+                  {amenities.length > 0 && (
+                    <div className="cafe-amenities">
+                      {amenities.map((amenity, index) => (
+                        <span key={index} className="amenity-badge">
+                          {amenity}
+                        </span>
+                      ))}
                     </div>
                   )}
-                  {website && (
-                    <div className="cafe-website">
-                      🌐 <a href={website} target="_blank" rel="noopener noreferrer">
-                        {website.replace(/^https?:\/\//, '').split('/')[0]}
-                      </a>
-                    </div>
-                  )}
+
+                  <div className="cafe-actions">
+                    <button
+                      className={`select-button ${isSelected ? 'selected' : ''}`}
+                      onClick={() => onCafeSelect(isSelected ? null : cafe)}
+                    >
+                      {isSelected ? 'Deselect' : 'Select on Map'}
+                    </button>
+                  </div>
+
+                  <div className="cafe-coordinates">
+                    {cafe.lat.toFixed(4)}, {cafe.lon.toFixed(4)}
+                  </div>
                 </div>
               )}
-
-              {amenities.length > 0 && (
-                <div className="cafe-amenities">
-                  {amenities.map((amenity, index) => (
-                    <span key={index} className="amenity-badge">
-                      {amenity}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="cafe-coordinates">
-                {cafe.lat.toFixed(4)}, {cafe.lon.toFixed(4)}
-              </div>
             </div>
           );
         })}
       </div>
 
-      {cafes.length === 0 && (
+      {hasMore && (
+        <div className="load-more-container">
+          <button
+            className="load-more-button"
+            onClick={() => setDisplayCount(prev => prev + ITEMS_PER_PAGE)}
+          >
+            Show More
+          </button>
+        </div>
+      )}
+
+      {filteredCafes.length === 0 && (
         <div className="empty-state">
           No cafés found matching your search.
         </div>

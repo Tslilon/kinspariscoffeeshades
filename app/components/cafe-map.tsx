@@ -27,11 +27,12 @@ export function CafeMap({ cafes, selectedHour, selectedCafe, onCafeSelect }: Caf
 
   const markers = useMemo(() => {
     const getMarkerColor = (cafe: Cafe) => {
-      const label = cafe.labelByHour?.[selectedHour] || "🌫️";
+      const label = cafe.labelByHour?.[selectedHour] || "cloudOn";
       switch (label) {
-        case "☀️": return "#ff6b35"; // sunny orange
-        case "⛅": return "#f7931e"; // mixed yellow-orange  
-        case "🌫️": return "#6c757d"; // shade gray
+        case "sun": return "#ff6b35"; // sunny orange
+        case "cloudSun": return "#f7931e"; // mixed yellow-orange  
+        case "cloudOn": return "#6c757d"; // shade gray
+        case "bedtime": return "#4a4a4a"; // after dark
         default: return "#6c757d";
       }
     };
@@ -117,15 +118,19 @@ export function CafeMap({ cafes, selectedHour, selectedCafe, onCafeSelect }: Caf
       <div className="map-legend">
         <div className="legend-item">
           <div className="legend-dot" style={{ backgroundColor: "#ff6b35" }}></div>
-          <span>☀️ Sunny</span>
+          <span>Sunny</span>
         </div>
         <div className="legend-item">
           <div className="legend-dot" style={{ backgroundColor: "#f7931e" }}></div>
-          <span>⛅ Mixed</span>
+          <span>Mixed</span>
         </div>
         <div className="legend-item">
           <div className="legend-dot" style={{ backgroundColor: "#6c757d" }}></div>
-          <span>🌫️ Shade</span>
+          <span>Shade</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-dot" style={{ backgroundColor: "#4a4a4a" }}></div>
+          <span>After Dark</span>
         </div>
       </div>
     </div>

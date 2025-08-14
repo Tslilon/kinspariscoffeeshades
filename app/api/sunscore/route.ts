@@ -1,4 +1,4 @@
-import { sunAt, labelFromScore, deg, clamp } from "@/app/lib/sun";
+import { sunAt, labelFromScore, isAfterSunset, deg, clamp } from "@/app/lib/sun";
 
 export const runtime = "nodejs";
 
@@ -165,7 +165,7 @@ export async function GET(request: Request) {
         );
         
         scoreByHour.push(score);
-        labelByHour.push(labelFromScore(score));
+        labelByHour.push(labelFromScore(score, isAfterSunset(hourTime)));
       }
       
       cafesWithScores.push({
