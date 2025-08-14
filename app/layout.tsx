@@ -2,18 +2,17 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 
 export const metadata = {
-  title: "WeatherGPT - ChatGPT Plugin to get the weather of any given location",
+  title: "Kin’s Paris Coffee Shades — Beat the locals. Catch the sun.",
   description:
-    "WeatherGPT is a ChatGPT Plugin to get the weather of any given location. Built with Next.js and served from Vercel's Edge Network.",
+    "Kin’s Paris Coffee Shades shows Paris weather and sun exposure for cafés.",
   twitter: {
     card: "summary_large_image",
-    title:
-      "WeatherGPT - ChatGPT Plugin to get the weather of any given location",
+    title: "Kin’s Paris Coffee Shades — Beat the locals. Catch the sun.",
     description:
-      "WeatherGPT is a ChatGPT Plugin to get the weather of any given location. Built with Next.js and served from Vercel's Edge Network.",
+      "Paris-only, free sources. Sun exposure for cafés across the next hours.",
     creator: "@steventey",
   },
-  metadataBase: new URL("https://weathergpt.vercel.app"),
+  metadataBase: new URL("https://kinspariscoffeeshades.vercel.app"),
   themeColor: "#FFF",
 };
 

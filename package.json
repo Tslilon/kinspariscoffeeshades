@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@turf/turf": "^7.2.0",
     "@types/node": "18.15.11",
     "@types/react": "18.0.35",
     "@types/react-dom": "18.0.11",
@@ -17,9 +18,17 @@
     "eslint": "8.38.0",
     "eslint-config-next": "13.3.0",
     "fs": "0.0.1-security",
+    "maplibre-gl": "^5.6.2",
     "next": "13.4.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "typescript": "5.0.4"
+    "react-map-gl": "^8.0.4",
+    "suncalc": "^1.9.0",
+    "typescript": "5.0.4",
+    "wellknown": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/suncalc": "^1.9.2",
+    "@types/wellknown": "^0.5.8"
   }
 }

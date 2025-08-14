@@ -110,13 +110,9 @@ if (likelyShadow) score *= 0.2;
     - `{ updatedAt, hours: [ISO], cafes: [{id, name, lat, lon, labelByHour: string[], scoreByHour: number[]}] }`.
 
 5) UI
-- Replace template’s chat panel with a two‑pane layout:
-  - Left: Paris weather header (icon, temp, cloud cover), time slider (next 6–8h).
-  - Below: searchable café list (name, neighborhood if available), pill badges for each hour.
-  - Right: Map (MapLibre GL + OSM tiles). Café markers colored by the selected hour’s label; click = detail card with hour chips.
-- Top bar branding: “Kin’s Paris Coffee Shades — Beat the locals. Catch the sun.”
-- Add a small legend: `☀︎ Sunny  ◑ Mixed  ▢ Shade`.
-- Add a Share button (copy URL with selected hour).
+- Replace template’s page with a two‑pane layout: - top left: Paris weather header (icon, temp, cloud cover), time slider (next 6–8h). - bottom left: café list with the details we have and if we have links perfect, search bar, pill badges for each hour, sortable by distance from a given coord (we'll use the env's KINHOUSE_COORDS variable + sun score filtering 
+- Right expendable: Map (MapLibre GL + OSM tiles). Café markers colored by the selected hour’s label; click = detail card with hour chips. 
+- Top bar branding: “Kin’s Paris Coffee Shades — Beat the locals. Catch the sun.” (ALREADY IN PLACE)
 
 6) Performance & DX
 - Cache Overpass & cafés processing.
@@ -130,7 +126,7 @@ if (likelyShadow) score *= 0.2;
 
 8) Copy tweaks
 - Empty state: “Loading the best suntraps in Paris…”.
-- Café card footer: “For Kin, with love.”
+- Café card footer: “For Kin ❤️”
 
 ### Minimal Code Stubs
 

@@ -1,0 +1,19 @@
+{
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "count": 12,
+  "source": "seed",
+  "cafes": [
+    {"id": "node/1", "name": "Café de Flore", "lat": 48.8542, "lon": 2.3320, "tags": {"amenity": "cafe", "name": "Café de Flore", "outdoor_seating": "yes"}},
+    {"id": "node/2", "name": "Les Deux Magots", "lat": 48.8543, "lon": 2.3335, "tags": {"amenity": "cafe", "name": "Les Deux Magots", "outdoor_seating": "yes"}},
+    {"id": "node/3", "name": "Café Procope", "lat": 48.8523, "lon": 2.3390, "tags": {"amenity": "cafe", "name": "Café Procope"}},
+    {"id": "node/4", "name": "L'As du Fallafel", "lat": 48.8574, "lon": 2.3620, "tags": {"amenity": "cafe", "name": "L'As du Fallafel", "outdoor_seating": "limited"}},
+    {"id": "node/5", "name": "Ten Belles", "lat": 48.8695, "lon": 2.3617, "tags": {"amenity": "cafe", "name": "Ten Belles", "outdoor_seating": "no"}},
+    {"id": "node/6", "name": "Café Charlot", "lat": 48.8634, "lon": 2.3632, "tags": {"amenity": "cafe", "name": "Café Charlot", "outdoor_seating": "yes"}},
+    {"id": "node/7", "name": "Boot Café", "lat": 48.8722, "lon": 2.3398, "tags": {"amenity": "cafe", "name": "Boot Café"}},
+    {"id": "node/8", "name": "Fragments", "lat": 48.8687, "lon": 2.3398, "tags": {"amenity": "cafe", "name": "Fragments", "outdoor_seating": "yes"}},
+    {"id": "node/9", "name": "Loustic", "lat": 48.8626, "lon": 2.3650, "tags": {"amenity": "cafe", "name": "Loustic"}},
+    {"id": "node/10", "name": "Café Kitsuné", "lat": 48.8608, "lon": 2.3376, "tags": {"amenity": "cafe", "name": "Café Kitsuné", "outdoor_seating": "yes"}},
+    {"id": "node/11", "name": "Shakespeare and Company Café", "lat": 48.8526, "lon": 2.3470, "tags": {"amenity": "cafe", "name": "Shakespeare and Company Café", "outdoor_seating": "limited"}},
+    {"id": "node/12", "name": "Telescope", "lat": 48.8660, "lon": 2.3440, "tags": {"amenity": "cafe", "name": "Telescope"}}
+  ]
+}

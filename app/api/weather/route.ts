@@ -1,20 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { geolocation } from "@vercel/edge";
-import { getWeatherData } from "@/app/lib/utils";
+import { getParisWeather } from "@/app/lib/utils";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
-export async function GET(req: NextRequest) {
-  let location = req.nextUrl.searchParams.get("location");
-  if (!location) {
-    const { city } = geolocation(req);
-    location = city || "San Francisco";
-  }
-
-  const response = await getWeatherData(location);
-
-  return NextResponse.json({
+export async function GET() {
+  const response = await getParisWeather();
+  const body = JSON.stringify({
     ...response,
-    infoLink: `https://weathergpt.vercel.app/${encodeURIComponent(location)}`,
+    infoLink: "https://open-meteo.com/en/docs",
+  });
+  return new Response(body, {
+    headers: { "content-type": "application/json" },
   });
 }
