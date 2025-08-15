@@ -1,6 +1,6 @@
-import fs from "fs";
 import fsp from "fs/promises";
 import path from "path";
+import { cache, CACHE_TIMES, buildCafeKey } from "@/app/lib/cache";
 
 export const runtime = "nodejs";
 
@@ -11,45 +11,6 @@ type Cafe = {
   lon: number;
   tags: Record<string, any>;
 };
-
-// Use /tmp for serverless environments like Vercel
-const CACHE_DIR = process.env.VERCEL_ENV ? "/tmp/cache" : path.join(process.cwd(), ".vercel", "cache");
-const CACHE_FILE = path.join(CACHE_DIR, "cafes.json");
-const TTL_MS = 24 * 60 * 60 * 1000; // 24h
-
-async function ensureCacheDir() {
-  try {
-    if (!fs.existsSync(CACHE_DIR)) {
-      await fsp.mkdir(CACHE_DIR, { recursive: true });
-    }
-  } catch (error) {
-    console.log('Cache directory creation failed, continuing without cache');
-  }
-}
-
-async function readCache(): Promise<any | null> {
-  try {
-    const stat = await fsp.stat(CACHE_FILE);
-    const age = Date.now() - stat.mtimeMs;
-    if (age < TTL_MS) {
-      const txt = await fsp.readFile(CACHE_FILE, "utf8");
-      return JSON.parse(txt);
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function writeCache(data: any) {
-  try {
-    await ensureCacheDir();
-    await fsp.writeFile(CACHE_FILE, JSON.stringify(data), "utf8");
-    console.log('✅ Cache written successfully');
-  } catch (error) {
-    console.log('❌ Cache write failed, continuing without cache');
-  }
-}
 
 async function loadSeed(): Promise<any> {
   const seedPath = path.join(process.cwd(), "public", "cafes.seed.json");
@@ -115,15 +76,55 @@ out body;
 }
 
 export async function GET() {
-  // 1. Check cache first
-  const cached = await readCache();
-  if (cached) {
+  const cacheKey = buildCafeKey();
+  
+  // 1. Check smart cache with SWR support
+  const { data: cached, isStale, shouldRefresh } = await cache.get(cacheKey);
+  
+  // 2. If we have fresh data, return it immediately
+  if (cached && !isStale) {
     return new Response(JSON.stringify(cached), {
-      headers: { "content-type": "application/json", "x-cache": "HIT" },
+      headers: { 
+        "content-type": "application/json", 
+        "x-cache": "HIT",
+        "x-cache-status": "fresh"
+      },
     });
   }
+  
+  // 3. If we have stale data but should refresh in background
+  if (cached && isStale && shouldRefresh) {
+    // Return stale data immediately for best UX
+    const response = new Response(JSON.stringify(cached), {
+      headers: { 
+        "content-type": "application/json", 
+        "x-cache": "HIT",
+        "x-cache-status": "stale-while-revalidate"
+      },
+    });
+    
+    // Background refresh (don't await)
+    refreshCafesInBackground(cacheKey);
+    
+    return response;
+  }
 
-  // 2. Try to fetch fresh data from Overpass
+  // 4. No cached data or expired - fetch fresh
+  return await fetchFreshCafes(cacheKey);
+}
+
+async function refreshCafesInBackground(cacheKey: string) {
+  try {
+    console.log('🔄 Background refresh started for cafés');
+    await fetchFreshCafes(cacheKey, true);
+    console.log('✅ Background refresh completed');
+  } catch (error) {
+    console.error('❌ Background refresh failed:', error);
+  }
+}
+
+async function fetchFreshCafes(cacheKey: string, isBackgroundRefresh = false) {
+  // Try to fetch fresh data from Overpass
   try {
     const cafes = await fetchOverpassCafes();
     if (cafes.length > 0) {
@@ -133,25 +134,51 @@ export async function GET() {
         source: "overpass",
         cafes,
       };
-      await writeCache(payload);
+      
+      // Cache with 14-day TTL + 1-day SWR
+      await cache.set(cacheKey, payload, {
+        ttl: CACHE_TIMES.CAFES,
+        swr: CACHE_TIMES.CAFES_SWR
+      });
+      
+      if (isBackgroundRefresh) return; // Don't return response for background refresh
+      
       return new Response(JSON.stringify(payload), {
-        headers: { "content-type": "application/json", "x-cache": "MISS" },
+        headers: { 
+          "content-type": "application/json", 
+          "x-cache": "MISS",
+          "x-cache-status": "fresh-fetch"
+        },
       });
     }
   } catch (err) {
     console.error("Overpass fetch failed:", err);
   }
 
-  // 3. Fall back to seed data
+  // Fall back to seed data
   try {
     const seed = await loadSeed();
     const payload = { ...seed, source: "seed" };
-    await writeCache(payload); // cache seed for next time
+    
+    // Cache seed data with shorter TTL (1 day)
+    await cache.set(cacheKey, payload, {
+      ttl: 24 * 60 * 60 * 1000, // 1 day for seed data
+      swr: 6 * 60 * 60 * 1000   // 6 hours SWR
+    });
+    
+    if (isBackgroundRefresh) return;
+    
     return new Response(JSON.stringify(payload), {
-      headers: { "content-type": "application/json", "x-cache": "SEED" },
+      headers: { 
+        "content-type": "application/json", 
+        "x-cache": "SEED",
+        "x-cache-status": "fallback"
+      },
     });
   } catch (err) {
     console.error("Seed load failed:", err);
+    if (isBackgroundRefresh) return;
+    
     return new Response(JSON.stringify({ error: "no_data_available" }), {
       status: 503,
       headers: { "content-type": "application/json" },

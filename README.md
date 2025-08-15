@@ -35,7 +35,7 @@ When available, uses precomputed shadow masks at 4-meter resolution for accurate
 - **Shadow System**: VoxCity high-precision precomputed shadow masks (4m resolution)
 - **Mapping**: MapLibre GL + MapTiler tiles
 - **Deployment**: Vercel with Node.js runtime
-- **Caching**: 24h file cache for café data, 5min for sun scores, in-memory VoxCity metadata
+- **Smart Caching**: 14-day café cache with SWR, split sun geometry (24h) + weather (60min), adaptive golden-hour freshness
 
 ## Getting Started
 
@@ -82,7 +82,12 @@ When available, uses precomputed shadow masks at 4-meter resolution for accurate
    - **VoxCity Mode**: Uses precomputed 4m-resolution shadow masks when available
    - **Heuristic Mode**: Falls back to building orientation and distance calculations
 5. **Scoring**: Combines sun angle, elevation, cloud cover, and precise shadow data
-6. **Caching**: Café data cached 24h, sun scores cached 5min, VoxCity metadata cached in memory
+6. **Smart Caching**: 
+   - **Cafés**: 14-day TTL + 1-day SWR (static data, rare changes)
+   - **Sun Geometry**: 24h TTL per date/location (astronomy changes daily)
+   - **Weather**: 60min TTL + 10min SWR, hour-aligned (matches provider schedule)
+   - **Adaptive**: 15min during golden hours or rapid cloud changes
+   - **VoxCity**: In-memory + edge KV with content hash
 
 ## API Endpoints
 

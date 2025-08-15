@@ -1,5 +1,14 @@
 import { sunAt, labelFromScore, isAfterSunset, deg, clamp } from "@/app/lib/sun";
 import { getVoxShadowValue, isVoxCityAvailable } from "@/app/lib/voxcity";
+import { 
+  cache, 
+  CACHE_TIMES, 
+  buildSunGeometryKey, 
+  buildWeatherKey, 
+  buildSunScoreKey,
+  isGoldenHour,
+  alignToHour 
+} from "@/app/lib/cache";
 import type { VoxShadowResult } from "@/app/lib/voxcity";
 
 export const runtime = "nodejs";
@@ -19,7 +28,52 @@ type CafeWithScores = {
   scoreByHour: number[];
 };
 
-async function fetchParisWeatherHourly(startTime: Date, hours: number) {
+type WeatherHourData = {
+  time: string;
+  cloudCover: number;
+  directRadiation: number;
+};
+
+async function fetchParisWeatherHourly(startTime: Date, hours: number): Promise<WeatherHourData[]> {
+  const lat = 48.8566;
+  const lon = 2.3522;
+  const hourBucket = alignToHour(startTime);
+  
+  // Check cache first with hour-aligned key
+  const cacheKey = buildWeatherKey(lat, lon, hourBucket);
+  const { data: cached, isStale, shouldRefresh } = await cache.get<WeatherHourData[]>(cacheKey);
+  
+  // Determine TTL based on golden hour status
+  const isGolden = isGoldenHour(startTime, lat, lon);
+  const ttl = isGolden ? CACHE_TIMES.GOLDEN_HOUR : CACHE_TIMES.WEATHER;
+  
+  // Return fresh cached data
+  if (cached && Array.isArray(cached) && !isStale) {
+    return cached.slice(0, hours); // Return only requested hours
+  }
+  
+  // Return stale data if available, refresh in background
+  if (cached && Array.isArray(cached) && isStale && shouldRefresh) {
+    // Background refresh
+    refreshWeatherInBackground(startTime, hours, cacheKey, ttl);
+    return cached.slice(0, hours);
+  }
+  
+  // Fetch fresh data
+  return await fetchFreshWeatherData(startTime, hours, cacheKey, ttl);
+}
+
+async function refreshWeatherInBackground(startTime: Date, hours: number, cacheKey: string, ttl: number) {
+  try {
+    console.log('🔄 Background weather refresh started');
+    await fetchFreshWeatherData(startTime, hours, cacheKey, ttl);
+    console.log('✅ Background weather refresh completed');
+  } catch (error) {
+    console.error('❌ Background weather refresh failed:', error);
+  }
+}
+
+async function fetchFreshWeatherData(startTime: Date, hours: number, cacheKey: string, ttl: number): Promise<WeatherHourData[]> {
   const startISO = startTime.toISOString().split('T')[0]; // YYYY-MM-DD
   const endDate = new Date(startTime.getTime() + hours * 60 * 60 * 1000);
   const endISO = endDate.toISOString().split('T')[0];
@@ -44,7 +98,7 @@ async function fetchParisWeatherHourly(startTime: Date, hours: number) {
   if (startIndex === -1) return [];
   
   const result = [];
-  for (let i = 0; i < hours && (startIndex + i) < hourlyTimes.length; i++) {
+  for (let i = 0; i < Math.max(hours, 12) && (startIndex + i) < hourlyTimes.length; i++) {
     const idx = startIndex + i;
     // Ensure the time is interpreted as Paris timezone
     const timeStr = hourlyTimes[idx];
@@ -57,6 +111,12 @@ async function fetchParisWeatherHourly(startTime: Date, hours: number) {
     });
   }
   
+  // Cache with adaptive TTL + SWR
+  await cache.set(cacheKey, result, {
+    ttl,
+    swr: CACHE_TIMES.WEATHER_SWR
+  });
+  
   return result;
 }
 
@@ -65,6 +125,7 @@ async function fetchCafes() {
   try {
     const { GET: getCafes } = await import('../cafes/route');
     const response = await getCafes();
+    if (!response) return [];
     const data = await response.json();
     return data.cafes ?? [];
   } catch (err) {
@@ -288,6 +349,27 @@ async function computeHybridSunScore(
   return { score: finalScore, method, confidence };
 }
 
+// Cache sun geometry calculations separately (24h TTL)
+async function getCachedSunGeometry(hourTime: Date, lat: number, lon: number): Promise<{ azimuth: number; elevation: number }> {
+  const geoKey = buildSunGeometryKey(lat, lon, hourTime);
+  const { data: cached } = await cache.get<{ azimuth: number; elevation: number }>(geoKey);
+  
+  if (cached && typeof cached === 'object' && 'azimuth' in cached && 'elevation' in cached) {
+    return cached;
+  }
+  
+  // Calculate fresh sun geometry
+  const { azimuth, elevation } = sunAt(hourTime, lat, lon);
+  const geometry = { azimuth, elevation };
+  
+  // Cache for 24 hours (astronomy changes predictably)
+  await cache.set(geoKey, geometry, {
+    ttl: CACHE_TIMES.SUN_GEOMETRY
+  });
+  
+  return geometry;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const hours = parseInt(url.searchParams.get('hours') ?? '8');
@@ -297,9 +379,68 @@ export async function GET(request: Request) {
   const now = nowParam ? new Date(nowParam) : new Date();
   const maxHours = Math.min(hours, 12); // cap at 12 hours
   const usePrecision = precisionParam === 'voxcity';
+  const hourBucket = alignToHour(now);
   
+  // Check main sun score cache first
+  const scoreKey = buildSunScoreKey(precisionParam, maxHours, hourBucket);
+  const { data: cachedScore, isStale, shouldRefresh } = await cache.get(scoreKey);
+  
+  // Determine adaptive TTL
+  const isGolden = isGoldenHour(now, 48.8566, 2.3522);
+  const ttl = isGolden ? CACHE_TIMES.GOLDEN_HOUR : CACHE_TIMES.WEATHER;
+  
+  // Return fresh cached scores
+  if (cachedScore && !isStale) {
+    return new Response(JSON.stringify(cachedScore), {
+      headers: { 
+        "content-type": "application/json",
+        "x-cache": "HIT",
+        "x-cache-status": "fresh",
+        "x-golden-hour": isGolden.toString()
+      },
+    });
+  }
+  
+  // Return stale scores while refreshing in background
+  if (cachedScore && isStale && shouldRefresh) {
+    // Background refresh
+    refreshSunScoresInBackground(now, maxHours, usePrecision, scoreKey, ttl);
+    
+    return new Response(JSON.stringify(cachedScore), {
+      headers: { 
+        "content-type": "application/json",
+        "x-cache": "HIT",
+        "x-cache-status": "stale-while-revalidate",
+        "x-golden-hour": isGolden.toString()
+      },
+    });
+  }
+  
+  // Compute fresh sun scores
+  return await computeFreshSunScores(now, maxHours, usePrecision, scoreKey, ttl, isGolden);
+}
+
+async function refreshSunScoresInBackground(now: Date, maxHours: number, usePrecision: boolean, scoreKey: string, ttl: number) {
   try {
-    // Fetch weather and cafes in parallel
+    console.log('🔄 Background sun score refresh started');
+    await computeFreshSunScores(now, maxHours, usePrecision, scoreKey, ttl, false, true);
+    console.log('✅ Background sun score refresh completed');
+  } catch (error) {
+    console.error('❌ Background sun score refresh failed:', error);
+  }
+}
+
+async function computeFreshSunScores(
+  now: Date, 
+  maxHours: number, 
+  usePrecision: boolean, 
+  scoreKey: string, 
+  ttl: number,
+  isGolden: boolean = false,
+  isBackgroundRefresh: boolean = false
+) {
+  try {
+    // Fetch weather and cafes in parallel (using smart caching)
     const [weatherData, cafes] = await Promise.all([
       fetchParisWeatherHourly(now, maxHours),
       fetchCafes()
@@ -309,7 +450,7 @@ export async function GET(request: Request) {
       throw new Error('No weather data available');
     }
     
-    const hourlyISO = weatherData.map(w => w.time);
+    const hourlyISO = weatherData.map((w: any) => w.time);
     const cafesWithScores: CafeWithScores[] = [];
     let voxCityUsageCount = 0;
     let heuristicUsageCount = 0;
@@ -323,7 +464,8 @@ export async function GET(request: Request) {
         const weather = weatherData[i];
         const hourTime = new Date(weather.time);
         
-        const { azimuth, elevation } = sunAt(hourTime, cafe.lat, cafe.lon);
+        // Use cached sun geometry (24h cache)
+        const { azimuth, elevation } = await getCachedSunGeometry(hourTime, cafe.lat, cafe.lon);
         
         // Use hybrid scoring (VoxCity + heuristic fallback)
         const { score, method, confidence } = await computeHybridSunScore(
@@ -337,7 +479,6 @@ export async function GET(request: Request) {
           hourTime,
           usePrecision
         );
-
         
         // Track method usage for metadata
         if (method === 'voxcity') {
@@ -347,8 +488,6 @@ export async function GET(request: Request) {
         }
         
         const afterSunset = isAfterSunset(hourTime, cafe.lat, cafe.lon);
-        
-
         
         scoreByHour.push(score);
         labelByHour.push(labelFromScore(score, afterSunset));
@@ -374,6 +513,8 @@ export async function GET(request: Request) {
         weatherSource: "open-meteo",
         orientationMethod: "street-based-v1.1",
         shadowMethod: usePrecision ? "voxcity+heuristic" : "heuristic-only",
+        cacheStrategy: "smart-split-swr",
+        goldenHour: isGolden,
         voxCityUsage: {
           voxCityCalculations: voxCityUsageCount,
           heuristicFallbacks: heuristicUsageCount,
@@ -384,15 +525,28 @@ export async function GET(request: Request) {
       }
     };
     
+    // Cache the response with adaptive TTL
+    await cache.set(scoreKey, response, {
+      ttl,
+      swr: CACHE_TIMES.WEATHER_SWR
+    });
+    
+    if (isBackgroundRefresh) return; // Don't return response for background refresh
+    
     return new Response(JSON.stringify(response), {
       headers: { 
         "content-type": "application/json",
-        "cache-control": "public, max-age=300" // 5min cache
+        "x-cache": "MISS",
+        "x-cache-status": "fresh-computation",
+        "x-golden-hour": isGolden.toString(),
+        "x-ttl": ttl.toString()
       },
     });
     
   } catch (err: any) {
     console.error("Sunscore API error:", err);
+    if (isBackgroundRefresh) return;
+    
     return new Response(JSON.stringify({ 
       error: "sunscore_failed", 
       message: err.message 

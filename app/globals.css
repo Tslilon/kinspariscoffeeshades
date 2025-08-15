@@ -1070,6 +1070,7 @@ html[data-theme="light"] input::placeholder {
   padding: 8px;
   font-size: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  color: var(--fg);
 }
 
 .legend-item {
@@ -1077,6 +1078,7 @@ html[data-theme="light"] input::placeholder {
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
+  color: var(--accents-6);
 }
 
 .legend-item:last-child {
@@ -1087,20 +1089,42 @@ html[data-theme="light"] input::placeholder {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 1px solid white;
+  border: 1px solid var(--accents-4);
 }
 
-/* Popup */
+/* Map Popup - Theme Aware */
 .cafe-popup .maplibregl-popup-content {
   padding: 12px;
   border-radius: 8px;
   font-size: 12px;
   max-width: 200px;
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+  border: 1px solid var(--accents-3) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.cafe-popup .maplibregl-popup-tip {
+  border-top-color: var(--bg) !important;
+}
+
+.cafe-popup .maplibregl-popup-close-button {
+  color: var(--accents-5) !important;
+  font-size: 18px !important;
+  right: 8px !important;
+  top: 8px !important;
+}
+
+.cafe-popup .maplibregl-popup-close-button:hover {
+  color: var(--fg) !important;
+  background: var(--accents-2) !important;
 }
 
 .popup-content h4 {
   margin: 0 0 8px 0;
   font-size: 14px;
+  color: var(--fg);
+  font-weight: 600;
 }
 
 .popup-details {
@@ -1109,8 +1133,38 @@ html[data-theme="light"] input::placeholder {
   gap: 6px;
 }
 
+.popup-details .sun-info {
+  color: var(--accents-6);
+  font-size: 13px;
+}
+
+.popup-details .score {
+  color: var(--accents-5);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
 .sun-info {
   font-weight: 600;
+}
+
+.hourly-preview {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.mini-badge {
+  font-size: 10px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: var(--accents-2);
+  color: var(--accents-6);
+}
+
+.mini-badge.current {
+  background: var(--sunny-orange);
+  color: white;
 }
 
 .score {
