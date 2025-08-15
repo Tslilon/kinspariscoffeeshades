@@ -375,9 +375,11 @@ export async function GET(request: Request) {
   const hours = parseInt(url.searchParams.get('hours') ?? '8');
   const nowParam = url.searchParams.get('now');
   const precisionParam = url.searchParams.get('precision') ?? 'voxcity';
+  const limitParam = url.searchParams.get('limit'); // Add café limit parameter
   
   const now = nowParam ? new Date(nowParam) : new Date();
   const maxHours = Math.min(hours, 12); // cap at 12 hours
+  const cafeLimit = limitParam ? Math.min(parseInt(limitParam), 1000) : 300; // Default 300 cafés
   const usePrecision = precisionParam === 'voxcity';
   const hourBucket = alignToHour(now);
   
@@ -417,13 +419,13 @@ export async function GET(request: Request) {
   }
   
   // Compute fresh sun scores
-  return await computeFreshSunScores(now, maxHours, usePrecision, scoreKey, ttl, isGolden);
+  return await computeFreshSunScores(now, maxHours, usePrecision, scoreKey, ttl, isGolden, false, cafeLimit);
 }
 
-async function refreshSunScoresInBackground(now: Date, maxHours: number, usePrecision: boolean, scoreKey: string, ttl: number) {
+async function refreshSunScoresInBackground(now: Date, maxHours: number, usePrecision: boolean, scoreKey: string, ttl: number, cafeLimit: number = 300) {
   try {
     console.log('🔄 Background sun score refresh started');
-    await computeFreshSunScores(now, maxHours, usePrecision, scoreKey, ttl, false, true);
+    await computeFreshSunScores(now, maxHours, usePrecision, scoreKey, ttl, false, true, cafeLimit);
     console.log('✅ Background sun score refresh completed');
   } catch (error) {
     console.error('❌ Background sun score refresh failed:', error);
@@ -437,7 +439,8 @@ async function computeFreshSunScores(
   scoreKey: string, 
   ttl: number,
   isGolden: boolean = false,
-  isBackgroundRefresh: boolean = false
+  isBackgroundRefresh: boolean = false,
+  cafeLimit: number = 300
 ) {
   try {
     // Fetch weather and cafes in parallel (using smart caching)
@@ -455,7 +458,12 @@ async function computeFreshSunScores(
     let voxCityUsageCount = 0;
     let heuristicUsageCount = 0;
     
-    for (const cafe of cafes) {
+    // Limit cafés for performance (take best distributed sample)
+    const limitedCafes = cafes.length > cafeLimit 
+      ? cafes.filter((_, index) => index % Math.ceil(cafes.length / cafeLimit) === 0).slice(0, cafeLimit)
+      : cafes;
+    
+    for (const cafe of limitedCafes) {
       const cafeOrientation = computeCafeOrientation(cafe);
       const scoreByHour: number[] = [];
       const labelByHour: string[] = [];
@@ -466,6 +474,16 @@ async function computeFreshSunScores(
         
         // Use cached sun geometry (24h cache)
         const { azimuth, elevation } = await getCachedSunGeometry(hourTime, cafe.lat, cafe.lon);
+        
+        // Early return for very low sun (skip expensive calculations)
+        const elevationDeg = deg(elevation);
+        if (elevationDeg < 5) {
+          const afterSunset = isAfterSunset(hourTime, cafe.lat, cafe.lon);
+          scoreByHour.push(0);
+          labelByHour.push(labelFromScore(0, afterSunset));
+          heuristicUsageCount++;
+          continue;
+        }
         
         // Use hybrid scoring (VoxCity + heuristic fallback)
         const { score, method, confidence } = await computeHybridSunScore(
@@ -509,6 +527,8 @@ async function computeFreshSunScores(
       cafes: cafesWithScores,
       meta: {
         totalCafes: cafesWithScores.length,
+        totalAvailable: cafes.length,
+        cafeLimit: cafeLimit,
         hoursComputed: maxHours,
         weatherSource: "open-meteo",
         orientationMethod: "street-based-v1.1",
