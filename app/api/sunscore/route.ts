@@ -460,7 +460,7 @@ async function computeFreshSunScores(
     
     // Limit cafés for performance (take best distributed sample)
     const limitedCafes = cafes.length > cafeLimit 
-      ? cafes.filter((_, index) => index % Math.ceil(cafes.length / cafeLimit) === 0).slice(0, cafeLimit)
+      ? cafes.filter((_: any, index: number) => index % Math.ceil(cafes.length / cafeLimit) === 0).slice(0, cafeLimit)
       : cafes;
     
     for (const cafe of limitedCafes) {
